@@ -1,0 +1,6 @@
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\bin\Release\BetterStarPlanets.dll
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\bin\Release\BetterStarPlanets.pdb
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\obj\Release\BetterStarPlanets.csproj.AssemblyReference.cache
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\obj\Release\BetterStarPlanets.csproj.CoreCompileInputs.cache
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\obj\Release\BetterStarPlanets.dll
+E:\Documents\GitHub\DSPmod\BetterStarPlanets\obj\Release\BetterStarPlanets.pdb
