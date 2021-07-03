@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("SuperPhotoVoltaic")]
+[assembly: AssemblyTitle("SuperPower")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SuperPhotoVoltaic")]
+[assembly: AssemblyProduct("SuperPower")]
 [assembly: AssemblyCopyright("Copyright ©  2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // 如果此项目向 COM 公开，则下列 GUID 用于类型库的 ID
-[assembly: Guid("0630500e-b010-46e4-a836-2c5d1c6921dc")]
+[assembly: Guid("7188840a-d52f-4334-a883-335440dade72")]
 
 // 程序集的版本信息由下列四个值组成: 
 //
