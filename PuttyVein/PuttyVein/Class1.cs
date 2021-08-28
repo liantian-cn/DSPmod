@@ -21,9 +21,9 @@ namespace PuttyVein
 
 
 
-			PuttyVein.more_combustible_mineral = base.Config.Bind<int>("", "more_combustible_mineral", 4, "更多可燃物");
-			PuttyVein.more_rare_mineral = base.Config.Bind<int>("", "more_rare_mineral", 2, "更多稀有矿物");
-			PuttyVein.more_base_mineral = base.Config.Bind<int>("", "more_base_mineral", 6, "更多基础矿物");
+			PuttyVein.more_combustible_mineral = base.Config.Bind<int>("", "more_combustible_mineral", 0, "为未到访过星球刷新更多的可燃物");
+			PuttyVein.more_rare_mineral = base.Config.Bind<int>("", "more_rare_mineral", 0, "为未到访过星球刷新更多的更多稀有矿物");
+			PuttyVein.more_base_mineral = base.Config.Bind<int>("", "more_base_mineral", 0, "为未到访过星球刷新更多的更多基础矿物");
 
 
 			PuttyVein.Logger = base.Logger;
