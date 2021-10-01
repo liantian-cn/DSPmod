@@ -1,6 +1,0 @@
-E:\Documents\GitHub\DSPmod\SuperPower\bin\Release\SuperPower.dll
-E:\Documents\GitHub\DSPmod\SuperPower\bin\Release\SuperPower.pdb
-E:\Documents\GitHub\DSPmod\SuperPower\obj\Release\SuperPower.csproj.AssemblyReference.cache
-E:\Documents\GitHub\DSPmod\SuperPower\obj\Release\SuperPower.csproj.CoreCompileInputs.cache
-E:\Documents\GitHub\DSPmod\SuperPower\obj\Release\SuperPower.dll
-E:\Documents\GitHub\DSPmod\SuperPower\obj\Release\SuperPower.pdb
