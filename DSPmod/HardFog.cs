@@ -20,10 +20,10 @@ namespace DSPmod
 
         public void Awake()
         {
-            HardFog.MoreFrequentRelays = base.Config.Bind<bool>("", "MoreFrequentRelays", true, "巢穴更频繁的发送的中继站");
-            HardFog.MoreEnergy = base.Config.Bind<bool>("", "MoreEnergy", true, "黑雾获得更多的能量");
-            HardFog.DysonSphereDebuffImmunity = base.Config.Bind<bool>("", "DysonSphereDebuffImmunity", true, "黑雾无法偷电，因为不偷也很强大了。");
-            HardFog.CoreIsInvincible = base.Config.Bind<bool>("", "CoreIsInvincible", true, "不攻击巢穴核心。");
+            HardFog.MoreFrequentRelays = base.Config.Bind<bool>("", "MoreFrequentRelays", false, "巢穴更频繁的发送的中继站");
+            HardFog.MoreEnergy = base.Config.Bind<bool>("", "MoreEnergy", false, "黑雾获得更多的能量");
+            HardFog.DysonSphereDebuffImmunity = base.Config.Bind<bool>("", "DysonSphereDebuffImmunity", false, "黑雾无法偷电，因为不偷也很强大了。");
+            HardFog.CoreIsInvincible = base.Config.Bind<bool>("", "CoreIsInvincible", false, "不攻击巢穴核心。");
             HardFog.Logger = base.Logger;
             Harmony.CreateAndPatchAll(typeof(HardFog));
             HardFog.Logger.LogInfo("HardFog 初始化");
@@ -43,19 +43,6 @@ namespace DSPmod
                 __instance.relayNeutralizedCounter = 0;
                 //HardFog.Logger.LogInfo("清空relayNeutralizedCounter");
             }
-
-            // 更多能量
-            //if (num == 0 && HardFog.MoreEnergy.Value)
-            //{
-            //    for (int j = 1; j < __instance.builders.cursor; j++)
-            //    {
-            //        __instance.builders.buffer[j].matter += (int)(((double)__instance.builders.buffer[j].maxMatter - (double)__instance.builders.buffer[j].matter) * 0.01);
-            //        __instance.builders.buffer[j].energy += (int)(((double)__instance.builders.buffer[j].maxEnergy - (double)__instance.builders.buffer[j].energy) * 0.01);
-            //        //HardFog.Logger.LogInfo("补充能量");
-
-            //    }
-
-            //}
 
         }
 
