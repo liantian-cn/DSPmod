@@ -38,11 +38,12 @@ namespace DSPmod
             int num = (int)(gameTick % 60L);
 
             // 提高发射中继站几率
-            if ((num == 0) && (HardFog.MoreFrequentRelays.Value) && (__instance.starData.id != __instance.gameData.galaxy.birthStarId))
+            if ((num == 0) && (HardFog.MoreFrequentRelays.Value))
             {
                 __instance.relayNeutralizedCounter = 0;
                 //HardFog.Logger.LogInfo("清空relayNeutralizedCounter");
             }
+
 
         }
 
@@ -65,13 +66,13 @@ namespace DSPmod
         [HarmonyPatch(typeof(DFSCoreComponent), "LogicTick")]
         public static void DFSCoreComponentLogicTick(DFSCoreComponent __instance, EnemyDFHiveSystem hive)
         {
-            if (HardFog.MoreEnergy.Value && (hive.starData.id != hive.gameData.galaxy.birthStarId))
+            if (HardFog.MoreEnergy.Value)
             {
                 ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
-                ptr.matter += (int)(((double)ptr.maxMatter - (double)ptr.matter) * 0.01);
-                ptr.energy += (int)(((double)ptr.maxEnergy - (double)ptr.energy) * 0.01);
-
-
+                if  (hive.starData.id != hive.gameData.galaxy.birthStarId) {
+                    ptr.matter += (int)(((double)ptr.maxMatter - (double)ptr.matter) * 0.005);
+                    ptr.energy += (int)(((double)ptr.maxEnergy - (double)ptr.energy) * 0.005);
+                }
             }
 
             ref EnemyData ptr4 = ref hive.sector.enemyPool[__instance.enemyId];
@@ -91,10 +92,13 @@ namespace DSPmod
         [HarmonyPatch(typeof(DFGBaseComponent), "LogicTick")]
         public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref EnemyBuilderComponent builder)
         {
-            if (HardFog.MoreEnergy.Value && (__instance.groundSystem.planet.star.id != __instance.groundSystem.gameData.galaxy.birthStarId))
+            if (HardFog.MoreEnergy.Value)
             {
-                builder.matter += (int)(((double)builder.maxMatter - (double)builder.matter) * 0.01);
-                builder.energy += (int)(((double)builder.maxEnergy - (double)builder.energy) * 0.01);
+                if (__instance.groundSystem.planet.star.id != __instance.groundSystem.gameData.galaxy.birthStarId) {
+                    builder.matter += (int)(((double)builder.maxMatter - (double)builder.matter) * 0.005);
+                    builder.energy += (int)(((double)builder.maxEnergy - (double)builder.energy) * 0.005);
+                }
+
 
 
             }
