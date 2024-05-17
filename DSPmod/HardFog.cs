@@ -13,6 +13,7 @@ namespace DSPmod
     {
         private static ConfigEntry<bool> MoreFrequentRelays;
         private static ConfigEntry<bool> MoreEnergy;
+        private static ConfigEntry<bool> LessEnergy;
         private static ConfigEntry<bool> DysonSphereDebuffImmunity;
         private static ConfigEntry<bool> CoreIsInvincible;
         public new static ManualLogSource Logger;
@@ -22,6 +23,7 @@ namespace DSPmod
         {
             HardFog.MoreFrequentRelays = base.Config.Bind<bool>("", "MoreFrequentRelays", false, "巢穴更频繁的发送的中继站");
             HardFog.MoreEnergy = base.Config.Bind<bool>("", "MoreEnergy", false, "黑雾获得更多的能量");
+            HardFog.LessEnergy = base.Config.Bind<bool>("", "LessEnergy", false, "黑雾获得更少的能量");
             HardFog.DysonSphereDebuffImmunity = base.Config.Bind<bool>("", "DysonSphereDebuffImmunity", false, "黑雾无法偷电，因为不偷也很强大了。");
             HardFog.CoreIsInvincible = base.Config.Bind<bool>("", "CoreIsInvincible", false, "不攻击巢穴核心。");
             HardFog.Logger = base.Logger;
@@ -73,9 +75,15 @@ namespace DSPmod
                     ptr.matter += (int)(((double)ptr.maxMatter - (double)ptr.matter) * 0.005);
                     ptr.energy += (int)(((double)ptr.maxEnergy - (double)ptr.energy) * 0.005);
                 }
+            } 
+            else if (HardFog.LessEnergy.Value)
+            {
+                ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
+                ptr.matter = 0;
+                ptr.energy = 0;
             }
 
-            ref EnemyData ptr4 = ref hive.sector.enemyPool[__instance.enemyId];
+                ref EnemyData ptr4 = ref hive.sector.enemyPool[__instance.enemyId];
             if (HardFog.CoreIsInvincible.Value) {
                 
                 ptr4.isInvincible = true;
@@ -102,6 +110,11 @@ namespace DSPmod
 
 
             }
+            else if (HardFog.LessEnergy.Value)
+            {
+                builder.matter = 0;
+                builder.energy = 0;
+            }
 
         }
 
@@ -120,20 +133,7 @@ namespace DSPmod
             }
             return true;
         }
-        // 去掉电力偷取
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DysonSphere), "energyRespCoef", MethodType.Getter)]
-        public static bool energyRespCoef_Patch(ref float __result)
-        {
-            if (HardFog.DysonSphereDebuffImmunity.Value)
-            {
-                __result = 1f;
-                return false;
 
-
-            }
-            return true;
-        }
 
 
 
