@@ -4,7 +4,6 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 using System.Collections.Generic;
-using System.Reflection.Emit;
 using BepInEx.Configuration;
 using UXAssist.UI;
 using UXAssist.Common;
@@ -14,7 +13,7 @@ using System.Linq;
 namespace HardFog
 {
     [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.1")]
-    [BepInProcess("DSPGAME.exe")]
+    [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFog : BaseUnityPlugin
     {
         private static ConfigEntry<bool> MoreFrequentRelaysEnable;
