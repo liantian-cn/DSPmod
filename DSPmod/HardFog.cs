@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Logging;
-using HarmonyLib;
 using UnityEngine;
+using HarmonyLib;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using UXAssist.UI;
 using UXAssist.Common;
 using System.Linq;
+using System.Collections;
+using UnityEngine.Playables;
 
 
 namespace HardFog
@@ -42,7 +45,6 @@ namespace HardFog
 
             I18N.Add("Clear the enemies on the current planet", "Clear the enemies on the current planet", "清理当前星球的黑雾");
             I18N.Add("Clear the space enemies of the current star", "Clear the space enemies of the current star", "清理当前恒星的太空黑雾");
-            I18N.Add("Clear the all enemies in the current star", "Clear the all enemies in the current star", "清理当前恒星的所有黑雾");
             I18N.Add("Fill the galaxy with Hive", "Fill the galaxy with Hive", "为所有星系填满黑雾巢穴");
             I18N.Add("Reset the Hive in the current star", "Reset the Hive in the current star", "为当前恒星重置黑雾巢穴");
             I18N.Add("More Frequent Relays", "The HIVE is sending out Relays more frequently.", "黑雾巢穴更频繁的发送中继站");
@@ -80,8 +82,6 @@ namespace HardFog
             wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
             y += 36f;
             wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", ClearStarEnemies);
-            y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Clear the all enemies in the current star", 16, "button-clear-star-all", ClearStarAndAllPlanetEnemies);
             y += 36f;
             wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", StarsFillHive);
             y += 36f;
@@ -331,18 +331,8 @@ namespace HardFog
 
         }
 
-        private static void ClearStarAndAllPlanetEnemies()
-        {
-            var player = GameMain.mainPlayer;
-            if (player == null) return;
-            var star = GameMain.localStar;
-            for (int i = 0; i < star.planetCount; i++)
-            {
-                PlanetData planetData = star.planets[i];
-                ClearPlanetEnemies(planetData);
-            }
-            ClearStarEnemies();
-        }
+
+
 
         private static void ClearStarEnemies()
         {
@@ -387,9 +377,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("units->" + enemyId);
+                                //HardFog.Logger.LogInfo("units->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
 
                         }
@@ -403,9 +392,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("tinders->" + enemyId);
+                                //HardFog.Logger.LogInfo("tinders->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -419,9 +407,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("idle relays->" + enemyId);
+                                //HardFog.Logger.LogInfo("idle relays->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -436,9 +423,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("turrets->" + enemyId);
+                                //HardFog.Logger.LogInfo("turrets->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -451,9 +437,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("gammas->" + enemyId);
+                                //HardFog.Logger.LogInfo("gammas->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -466,9 +451,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("replicators->" + enemyId);
+                                //HardFog.Logger.LogInfo("replicators->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -481,9 +465,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("connectors->" + enemyId);
+                                //HardFog.Logger.LogInfo("connectors->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -497,9 +480,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("nodes->" + enemyId);
+                                //HardFog.Logger.LogInfo("nodes->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
                     }
@@ -512,9 +494,8 @@ namespace HardFog
                             ref var enemyData = ref spaceSector.enemyPool[enemyId];
                             if ((!enemyData.isInvincible) && (enemyData.dfSCoreId <= 0))
                             {
-                                HardFog.Logger.LogInfo("builders->" + enemyId);
+                                //HardFog.Logger.LogInfo("builders->" + enemyId);
                                 needKillEnemyIds.Add(enemyId);
-                                //spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                             }
                         }
 
