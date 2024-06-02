@@ -42,6 +42,7 @@ namespace HardFog
 
             I18N.Add("Clear the enemies on the current planet", "Clear the enemies on the current planet", "清理当前星球的黑雾");
             I18N.Add("Clear the space enemies of the current star", "Clear the space enemies of the current star", "清理当前恒星的太空黑雾");
+            I18N.Add("Clear the all enemies in the current star", "Clear the all enemies in the current star", "清理当前恒星的所有黑雾");
             I18N.Add("Fill the galaxy with Hive", "Fill the galaxy with Hive", "为所有星系填满黑雾巢穴");
             I18N.Add("Reset the Hive in the current star", "Reset the Hive in the current star", "为当前恒星重置黑雾巢穴");
             I18N.Add("More Frequent Relays", "The HIVE is sending out Relays more frequently.", "黑雾巢穴更频繁的发送中继站");
@@ -76,19 +77,21 @@ namespace HardFog
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, "Hard fog", "tab-group-hard-fog");
             var tab1 = wnd.AddTab(_windowTrans, "General");
-            wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", HardFog.ClearPlanetEnemies);
+            wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", HardFog.ClearStarEnemies);
+            wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", ClearStarEnemies);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", HardFog.StarsFillHive);
+            wnd.AddButton(x, y, 200, tab1, "Clear the all enemies in the current star", 16, "button-clear-star-all", ClearStarAndAllPlanetEnemies);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", HardFog.StarResetHive);
+            wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", StarsFillHive);
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", StarResetHive);
             y += 36f;
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.MoreFrequentRelaysEnable, "More Frequent Relays");
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Invincible", 12, "button-set-core-invincible", HardFog.SetCoreInvincible);
+            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Invincible", 12, "button-set-core-invincible", SetCoreInvincible);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Vulnerable", 12, "button-set-core-vulnerable", HardFog.SetCoreVulnerable);
+            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Vulnerable", 12, "button-set-core-vulnerable", SetCoreVulnerable);
             y += 36f;
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DysonSphereDebuffImmunityEnable, "Fog cannot steal electricity");
             y += 36f;
@@ -252,15 +255,21 @@ namespace HardFog
 
 
 
-
-
-
-
-        public static void ClearPlanetEnemies()
+        private static void ClearCurrentPlanetEnemies()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var planet = GameMain.localPlanet;
+            ClearPlanetEnemies(planet);
+        }
+
+
+
+        private static void ClearPlanetEnemies(PlanetData planet)
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+
 
             HardFog.Logger.LogInfo("planet.name: " + planet.name);
 
@@ -322,8 +331,20 @@ namespace HardFog
 
         }
 
+        private static void ClearStarAndAllPlanetEnemies()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var star = GameMain.localStar;
+            for (int i = 0; i < star.planetCount; i++)
+            {
+                PlanetData planetData = star.planets[i];
+                ClearPlanetEnemies(planetData);
+            }
+            ClearStarEnemies();
+        }
 
-        public static void ClearStarEnemies()
+        private static void ClearStarEnemies()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
@@ -545,7 +566,7 @@ namespace HardFog
             }
 
         }
-        public static void StarsFillHive()
+        private static void StarsFillHive()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
@@ -615,7 +636,7 @@ namespace HardFog
             }
         }
 
-        public static void StarResetHive()
+        private static void StarResetHive()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
@@ -633,7 +654,7 @@ namespace HardFog
             }
         }
 
-        public static void SetCoreInvincible()
+        private static void SetCoreInvincible()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
@@ -659,7 +680,7 @@ namespace HardFog
             }
         }
 
-        public static void SetCoreVulnerable()
+        private static void SetCoreVulnerable()
         {
             var player = GameMain.mainPlayer;
             if (player == null) return;
