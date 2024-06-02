@@ -1,0 +1,5 @@
+2 commits since v5.4.23
+
+Changelog (excluding merges):
+* (fadd8a7) [ManlyMarco] Bump version number
+* (3129520) [aldelaro5] Upgrade Doorstop to version 4.2.0 (#864)

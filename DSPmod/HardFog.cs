@@ -3,14 +3,11 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
-using BepInEx.Configuration;
-using System.IO;
-using Steamworks;
 using System.Collections.Generic;
-using UnityEngine.UI;
+using System.Reflection.Emit;
+using BepInEx.Configuration;
 using UXAssist.UI;
 using UXAssist.Common;
-using UXAssist;
 using System.Linq;
 
 
@@ -20,14 +17,11 @@ namespace HardFog
     [BepInProcess("DSPGAME.exe")]
     public class HardFog : BaseUnityPlugin
     {
-        private static ConfigEntry<bool> MoreFrequentRelays;
-        //private static ConfigEntry<bool> HiveMoreEnergy;
-        //private static ConfigEntry<bool> HiveLessEnergy;
-        //private static ConfigEntry<bool> BaseMoreEnergy;
-        //private static ConfigEntry<bool> BaseLessEnergy;
-        private static ConfigEntry<bool> DysonSphereDebuffImmunity;
-        private static ConfigEntry<bool> CoreIsInvincible;
-        private static ConfigEntry<bool> SuperRayReception;
+        private static ConfigEntry<bool> MoreFrequentRelaysEnable;
+        private static ConfigEntry<bool> DysonSphereDebuffImmunityEnable;
+        private static ConfigEntry<bool> SuperRayReceptionEnable;
+        private static ConfigEntry<bool> DFSCoreSuperEnergyEnable;
+        private static ConfigEntry<bool> DFGBaseSuperEnergyEnable;
 
         public new static ManualLogSource Logger;
 
@@ -37,14 +31,12 @@ namespace HardFog
 
         public void Awake()
         {
-            HardFog.MoreFrequentRelays = base.Config.Bind<bool>("FogCheats", "MoreFrequentRelays", false, "巢穴更频繁的发送的中继站");
-            //HardFog.HiveMoreEnergy = base.Config.Bind<bool>("FogCheats", "HiveMoreEnergy", false, "黑雾巢穴获得更多的能量");
-            //HardFog.HiveLessEnergy = base.Config.Bind<bool>("FogCheats", "HiveLessEnergy", false, "黑雾巢穴获得更少的能量");
-            //HardFog.BaseMoreEnergy = base.Config.Bind<bool>("FogCheats", "BaseMoreEnergy", false, "行星基地获得更多的能量");
-            //HardFog.BaseLessEnergy = base.Config.Bind<bool>("FogCheats", "BaseLessEnergy", false, "行星基地获得更少的能量");
-            HardFog.DysonSphereDebuffImmunity = base.Config.Bind<bool>("Cheats", "DysonSphereDebuffImmunity", false, "黑雾无法偷电，因为不偷也很强大了。");
-            HardFog.CoreIsInvincible = base.Config.Bind<bool>("QOL", "CoreIsInvincible", true, "不攻击巢穴核心。");
-            HardFog.SuperRayReception = base.Config.Bind<bool>("Cheats", "SuperRayReception", false, "射线接收器满速接收。");
+            MoreFrequentRelaysEnable = Config.Bind("FogCheats", "MoreFrequentRelays", false, "巢穴更频繁的发送的中继站");
+            DysonSphereDebuffImmunityEnable = Config.Bind("Cheats", "DysonSphereDebuffImmunity", false, "黑雾无法偷电");
+            SuperRayReceptionEnable = Config.Bind("Cheats", "SuperRayReception", false, "射线接收器满速接收");
+            DFSCoreSuperEnergyEnable = Config.Bind("FogCheats", "DFSCoreSuperEnergy", false, "玩家所在星系黑雾巢穴满能量");
+            DFGBaseSuperEnergyEnable = Config.Bind("FogCheats", "DFGBaseSuperEnergy", false, "黑雾地面基地满能量");
+
             HardFog.Logger = base.Logger;
             Harmony.CreateAndPatchAll(typeof(HardFog));
 
@@ -53,9 +45,22 @@ namespace HardFog
             I18N.Add("Clear the space enemies of the current star", "Clear the space enemies of the current star", "清理当前恒星的太空黑雾");
             I18N.Add("Fill the galaxy with Hive", "Fill the galaxy with Hive", "为所有星系填满黑雾巢穴");
             I18N.Add("Reset the Hive in the current star", "Reset the Hive in the current star", "为当前恒星重置黑雾巢穴");
+            I18N.Add("More Frequent Relays", "The HIVE is sending out Relays more frequently.", "黑雾巢穴更频繁的发送中继站");
+            I18N.Add("Set HiveCore Invincible", "The HiveCore in the current star is invulnerable to attacks", "当前恒星的黑雾巢穴核心无法被攻击");
+            I18N.Add("Set HiveCore Vulnerable", "The HiveCore in the current star is vulnerable to attacks.", "当前恒星的黑雾巢穴核心可以被攻击");
+            I18N.Add("Fog cannot steal electricity", "Fog cannot steal electricity", "黑雾无法偷取电力");
+            I18N.Add("the ray receiver receives at full power", "ray receiver receives at full power", "射线接收器满接收");
+            I18N.Add("The Hive in the current star get full energy and matter", "The Hive in the current star get full energy and matter", "当前恒星的黑雾巢穴满能量/物质");
+            I18N.Add("The Fogbase get full energy and matter", "The Fog core on base get full energy and matter", "黑雾地面核心获得满能量/物质");
             I18N.Apply();
 
             MyConfigWindow.OnUICreated += CreateUI;
+
+            MoreFrequentRelaysEnable.SettingChanged += (_, _) => MoreFrequentRelaysPatch.Enable(MoreFrequentRelaysEnable.Value);
+            DysonSphereDebuffImmunityEnable.SettingChanged += (_, _) => DysonSphereDebuffImmunityPatch.Enable(DysonSphereDebuffImmunityEnable.Value);
+            SuperRayReceptionEnable.SettingChanged += (_, _) => SuperRayReceptionPatch.Enable(SuperRayReceptionEnable.Value);
+            DFSCoreSuperEnergyEnable.SettingChanged += (_, _) => DFSCoreSuperEnergyPatch.Enable(DFSCoreSuperEnergyEnable.Value);
+            DFGBaseSuperEnergyEnable.SettingChanged += (_, _) => DFGBaseSuperEnergyPatch.Enable(DFGBaseSuperEnergyEnable.Value);
             HardFog.Logger.LogInfo("HardFog 初始化");
 
 
@@ -67,7 +72,7 @@ namespace HardFog
         {
             _windowTrans = trans;
             // General tab
-            var x = 0f;
+            var x = 10f;
             var y = 10f;
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, "Hard fog", "tab-group-hard-fog");
@@ -79,103 +84,177 @@ namespace HardFog
             wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", HardFog.StarsFillHive);
             y += 36f;
             wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", HardFog.StarResetHive);
+            y += 36f;
+            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.MoreFrequentRelaysEnable, "More Frequent Relays");
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Invincible", 12, "button-set-core-invincible", HardFog.SetCoreInvincible);
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Vulnerable", 12, "button-set-core-vulnerable", HardFog.SetCoreVulnerable);
+            y += 36f;
+            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DysonSphereDebuffImmunityEnable, "Fog cannot steal electricity");
+            y += 36f;
+            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.SuperRayReceptionEnable, "the ray receiver receives at full power");
+            y += 36f;
+            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFSCoreSuperEnergyEnable, "The Hive in the current star get full energy and matter");
+            y += 36f;
+            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFGBaseSuperEnergyEnable, "The Fogbase get full energy and matter");
+
+
         }
 
 
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(EnemyDFHiveSystem), "GameTickLogic")]
-        public static void EnemyDFHiveSystemPreGameTickLogic(EnemyDFHiveSystem __instance, long gameTick)
+        private static class MoreFrequentRelaysPatch
         {
-            int num = (int)(gameTick % 6000L);
+            private static Harmony _patch;
 
-            // 中继器更加频繁
-            if ((num == 0) && (HardFog.MoreFrequentRelays.Value))
+            public static void Enable(bool enable)
             {
-                __instance.relayNeutralizedCounter = 0;
-                //HardFog.Logger.LogInfo("清空relayNeutralizedCounter");
+                if (enable)
+                {
+                    _patch = Harmony.CreateAndPatchAll(typeof(MoreFrequentRelaysPatch));
+                    return;
+                }
+                _patch?.UnpatchSelf();
+                _patch = null;
             }
 
-        }
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(EnemyDFHiveSystem), "GameTickLogic")]
+            public static void EnemyDFHiveSystemPreGameTickLogic(EnemyDFHiveSystem __instance, long gameTick)
+            {
+                int num = (int)(gameTick % 6000L);
+                __instance.relayNeutralizedCounter = 0;
+            }
 
-        // 中继器更加频繁
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DFRelayComponent), "RelaySailLogic")]
-        public static void DFRelayComponentRelaySailLogic(DFRelayComponent __instance, ref bool keyFrame)
-        {
-            if (HardFog.MoreFrequentRelays.Value)
+            // 中继器更加频繁
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DFRelayComponent), "RelaySailLogic")]
+            public static void DFRelayComponentRelaySailLogic(DFRelayComponent __instance, ref bool keyFrame)
             {
                 keyFrame = true;
             }
 
+
         }
 
-
-
-        //// 增加黑雾巢穴能量
-        //[HarmonyPrefix]
-        //[HarmonyPatch(typeof(DFSCoreComponent), "LogicTick")]
-        //public static void DFSCoreComponentLogicTick(DFSCoreComponent __instance, EnemyDFHiveSystem hive)
-        //{
-        //    if ((HardFog.HiveMoreEnergy.Value) && (hive.evolve.waveTicks > 0) && (hive.starData.id != hive.galaxy.birthStarId))
-        //    {
-        //        ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
-        //        ptr.matter += (int)(((double)ptr.maxMatter * 2 - (double)ptr.matter) * 0.05);
-        //        ptr.energy += (int)(((double)ptr.maxEnergy * 2 - (double)ptr.energy) * 0.05);
-
-        //    }
-        //    else if (HardFog.HiveLessEnergy.Value)
-        //    {
-        //        ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
-        //        ptr.matter -= (int)(((double)ptr.matter - (double)ptr.minMatter) * 0.05);
-        //        ptr.energy -= (int)(((double)ptr.energy - (double)ptr.minEnergy) * 0.05); ;
-        //    }
-
-        //    ref EnemyData ptr4 = ref hive.sector.enemyPool[__instance.enemyId];
-        //    if (HardFog.CoreIsInvincible.Value)
-        //    {
-
-        //        ptr4.isInvincible = true;
-        //    }
-        //    else
-        //    {
-        //        ptr4.isInvincible = false;
-        //    }
-
-
-        //}
-
-        //// 增加基地核心的能量
-        //[HarmonyPrefix]
-        //[HarmonyPatch(typeof(DFGBaseComponent), "LogicTick")]
-        //public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref EnemyBuilderComponent builder)
-        //{
-        //    if ((HardFog.BaseMoreEnergy.Value && (__instance.turboTicks > 0)))
-        //    {
-        //        builder.matter += (int)(((double)builder.maxMatter - (double)builder.matter) * 0.05);
-        //        builder.energy += (int)(((double)builder.maxEnergy - (double)builder.energy) * 0.05);
-        //    }
-        //    else if (HardFog.BaseLessEnergy.Value)
-        //    {
-        //        builder.matter -= (int)(((double)builder.matter - (double)builder.minMatter) * 0.05);
-        //        builder.energy -= (int)(((double)builder.matter - (double)builder.minEnergy) * 0.05);
-        //    }
-
-        //}
-
-
-        // 去掉电力偷取
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DysonSphere), "energyDFHivesDebuffCoef", MethodType.Getter)]
-        public static bool EnergyDFHivesDebuffCoef_Patch(ref double __result)
+        private static class DysonSphereDebuffImmunityPatch
         {
-            if (HardFog.DysonSphereDebuffImmunity.Value)
+            private static Harmony _patch;
+
+            public static void Enable(bool enable)
             {
+                if (enable)
+                {
+                    _patch = Harmony.CreateAndPatchAll(typeof(DysonSphereDebuffImmunityPatch));
+                    return;
+                }
+                _patch?.UnpatchSelf();
+                _patch = null;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DysonSphere), "energyDFHivesDebuffCoef", MethodType.Getter)]
+            public static bool EnergyDFHivesDebuffCoef_Patch(ref double __result)
+            {
+
                 __result = 1.0;
                 return false;
 
             }
-            return true;
+
+
         }
+
+
+        private static class SuperRayReceptionPatch
+        {
+            private static Harmony _patch;
+
+            public static void Enable(bool enable)
+            {
+                if (enable)
+                {
+                    _patch = Harmony.CreateAndPatchAll(typeof(SuperRayReceptionPatch));
+                    return;
+                }
+                _patch?.UnpatchSelf();
+                _patch = null;
+            }
+
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DysonSphere), "energyRespCoef", MethodType.Getter)]
+            public static bool energyRespCoef_Patch(ref float __result)
+            {
+
+                __result = 1f;
+                return false;
+
+            }
+
+
+        }
+
+        private static class DFSCoreSuperEnergyPatch
+        {
+            private static Harmony _patch;
+
+            public static void Enable(bool enable)
+            {
+                if (enable)
+                {
+                    _patch = Harmony.CreateAndPatchAll(typeof(DFSCoreSuperEnergyPatch));
+                    return;
+                }
+                _patch?.UnpatchSelf();
+                _patch = null;
+            }
+
+            // 增加黑雾巢穴能量
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DFSCoreComponent), "LogicTick")]
+            public static void DFSCoreComponentLogicTick(DFSCoreComponent __instance, EnemyDFHiveSystem hive)
+            {
+                if (hive.isLocal)
+                {
+                    ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
+                    ptr.matter = ptr.maxMatter;
+                    ptr.energy = ptr.maxEnergy;
+                }
+            }
+        }
+
+
+        private static class DFGBaseSuperEnergyPatch
+        {
+            private static Harmony _patch;
+
+            public static void Enable(bool enable)
+            {
+                if (enable)
+                {
+                    _patch = Harmony.CreateAndPatchAll(typeof(DFGBaseSuperEnergyPatch));
+                    return;
+                }
+                _patch?.UnpatchSelf();
+                _patch = null;
+            }
+            // 增加基地核心的能量
+            [HarmonyPrefix]
+            [HarmonyPatch(typeof(DFGBaseComponent), "LogicTick")]
+            public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref EnemyBuilderComponent builder)
+            {
+
+                builder.matter = builder.maxMatter;
+                builder.energy = builder.maxEnergy;
+
+            }
+        }
+
+
+
+
+
+
 
 
         public static void ClearPlanetEnemies()
@@ -555,18 +634,61 @@ namespace HardFog
             }
         }
 
-        // 星球
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(DysonSphere), "energyRespCoef", MethodType.Getter)]
-        public static bool energyRespCoef_Patch(ref float __result)
+        public static void SetCoreInvincible()
         {
-            if (HardFog.SuperRayReception.Value)
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+            var star = GameMain.localStar;
+            SpaceSector spaceSector = GameMain.spaceSector;
+
+
+            EnemyDFHiveSystem enemyDFHiveSystem = spaceSector.dfHives[star.index];
+
+            while (enemyDFHiveSystem != null)
             {
-                __result = 1f;
-                return false;
+
+                // 清空核心能量
+                for (var i = enemyDFHiveSystem.cores.cursor - 1; i > 0; i--)
+                {
+
+                    ref EnemyData ptr = ref spaceSector.enemyPool[enemyDFHiveSystem.cores.buffer[i].enemyId];
+                    ptr.isInvincible = true;
+                }
+
+                enemyDFHiveSystem = enemyDFHiveSystem.nextSibling;
             }
-            return true;
         }
+
+        public static void SetCoreVulnerable()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+            var star = GameMain.localStar;
+            SpaceSector spaceSector = GameMain.spaceSector;
+
+
+            EnemyDFHiveSystem enemyDFHiveSystem = spaceSector.dfHives[star.index];
+
+            while (enemyDFHiveSystem != null)
+            {
+
+                // 清空核心能量
+                for (var i = enemyDFHiveSystem.cores.cursor - 1; i > 0; i--)
+                {
+
+                    ref EnemyData ptr = ref spaceSector.enemyPool[enemyDFHiveSystem.cores.buffer[i].enemyId];
+                    ptr.isInvincible = false;
+                }
+
+                enemyDFHiveSystem = enemyDFHiveSystem.nextSibling;
+            }
+        }
+
+
+
+
 
     }
 }
