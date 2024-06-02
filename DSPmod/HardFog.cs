@@ -15,7 +15,7 @@ using UnityEngine.Playables;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.1")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.6")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFog : BaseUnityPlugin
     {
