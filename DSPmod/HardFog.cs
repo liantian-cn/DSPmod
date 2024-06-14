@@ -25,6 +25,28 @@ namespace HardFog
         private static ConfigEntry<bool> DFSCoreSuperEnergyEnable;
         private static ConfigEntry<bool> DFGBaseSuperEnergyEnable;
 
+        private static int Iron = 1;
+        private static int Copper = 2;
+        private static int Silicium = 3;
+        private static int Titanium = 4;
+        private static int Stone = 5;
+        private static int Coal = 6;
+        private static int Oil = 7;
+        private static int Fireice = 8;
+        private static int Diamond = 9;
+        private static int Fractal = 10;
+        private static int Crysrub = 11;
+        private static int Grat = 12;
+        private static int Bamboo = 13;
+        private static int Mag = 14;
+
+        private static UIButton buttonClearPlanet;
+        private static UIButton buttonClearStar;
+        private static UIButton buttonFillHive;
+        private static UIButton buttonResetHive;
+
+
+
         public new static ManualLogSource Logger;
 
         // UXAssist面板
@@ -54,6 +76,12 @@ namespace HardFog
             I18N.Add("the ray receiver receives at full power", "ray receiver receives at full power", "射线接收器满接收");
             I18N.Add("The Hive in the current star get full energy and matter", "The Hive in the current star get full energy and matter", "当前恒星的黑雾巢穴满能量/物质");
             I18N.Add("The Fogbase get full energy and matter", "The Fog core on base get full energy and matter", "黑雾地面核心获得满能量/物质");
+            I18N.Add("Clear all vein on the current planet", "Clear all vein on the current planet", "清除矿脉");
+            I18N.Add("Batch add vein on the current planet(candy)", "Batch add vein on the current planet(candy)", "批量添加矿脉(糖)");
+            I18N.Add("Batch add vein on the current planet(2)", "Batch add vein on the current planet(2)", "批量添加矿脉(2)");
+            I18N.Add("Batch add vein on the current planet(3)", "Batch add vein on the current planet(3)", "批量添加矿脉(3)");
+            I18N.Add("Batch add vein on the current planet(4)", "Batch add vein on the current planet(4)", "批量添加矿脉(4)");
+            I18N.Add("Reset the Hive in the current star", "reset all vein on the current planet", "重建矿物储量");
             I18N.Apply();
 
             MyConfigWindow.OnUICreated += CreateUI;
@@ -79,13 +107,13 @@ namespace HardFog
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, "Hard fog", "tab-group-hard-fog");
             var tab1 = wnd.AddTab(_windowTrans, "General");
-            wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
+            buttonClearPlanet = wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", ClearStarEnemies);
+            buttonClearStar = wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", ClearStarEnemies);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", StarsFillHive);
+            buttonFillHive = wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", StarsFillHive);
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", StarResetHive);
+            buttonResetHive = wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", StarResetHive);
             y += 36f;
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.MoreFrequentRelaysEnable, "More Frequent Relays");
             y += 36f;
@@ -100,7 +128,19 @@ namespace HardFog
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFSCoreSuperEnergyEnable, "The Hive in the current star get full energy and matter");
             y += 36f;
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFGBaseSuperEnergyEnable, "The Fogbase get full energy and matter");
-
+            x = 330f;
+            y = 10f;
+            wnd.AddButton(x, y, 200, tab1, "Clear all vein on the current planet", 16, "button-clear-vein", ClearAllVein);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "reset all vein on the current planet ", 16, "button-wealt-vein", WealtAllVein);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(candy)", 16, "button-batch-add-vein", BatchAddVein);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(2)", 16, "button-batch-add-vein2", BatchAddVein2);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(3)", 16, "button-batch-add-vein3", BatchAddVein3);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(4)", 16, "button-batch-add-vein4", BatchAddVein4);
 
         }
 
@@ -252,15 +292,370 @@ namespace HardFog
             }
         }
 
+        private static void ClearAllVein()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+
+            foreach (VeinData i in planet.factory.veinPool)
+            {
+                planet.factory.veinGroups[i.groupIndex].count--;
+                planet.factory.veinGroups[i.groupIndex].amount -= i.amount;
+                planet.factory.RemoveVeinWithComponents(i.id);
+                if (planet.factory.veinGroups[i.groupIndex].count == 0)
+                {
+                    planet.factory.veinGroups[i.groupIndex].type = 0;
+                    planet.factory.veinGroups[i.groupIndex].amount = 0;
+                    planet.factory.veinGroups[i.groupIndex].pos = Vector3.zero;
+                }
+
+
+            }
+
+        }
+
+        private static void WealtAllVein()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+            System.Random random = new System.Random();
+            foreach (VeinData i in planet.factory.veinPool)
+            {
+                if (i.type != EVeinType.Oil)
+                {
+                    planet.factory.veinPool[i.id].amount = random.Next(8500,11500);
+                } else
+                {
+                    planet.factory.veinPool[i.id].amount = random.Next(150000, 200000);
+                }
+                planet.factory.RecalculateVeinGroup(i.groupIndex);
+
+            }
+
+        }
+
+
+        private static Vector3  ConvertToVector3(int X, int Y)
+        {
+            var planet = GameMain.localPlanet;
+            float radius = planet.radius;
+
+            double radian = Math.PI * (28.8 / 80 * (double)Y) / 180.0;
+            double siniRadian = Math.Sin(radian);
+            double cosiRadian = Math.Cos(radian);
+            double d_veinY = siniRadian * (double)planet.radius;
+            float f_veinY = (float)d_veinY;
+            double d_veinRadius = cosiRadian * (double)planet.radius;
+
+            double vein_angle = (double)X / 1000.0 * 360.0;
+            double d_veinX = Math.Sin(Math.PI * vein_angle / 180.0) * d_veinRadius;
+            double d_veinZ = Math.Cos(Math.PI * vein_angle / 180.0) * d_veinRadius;
+            float f_veinX = (float)d_veinX;
+            float f_veinZ = (float)d_veinZ;
+            Vector3 vein_pos = new Vector3(f_veinX, f_veinY, f_veinZ);
+            return vein_pos;
+
+        }
+
+        private static void AddVeinVeinByRange(int veintype, int x_start,int x_end,int y_start,int y_end)
+        {
+            for (int i = x_start; i < x_end; i++)
+            {
+                for (int j = y_start; j < y_end; j++)
+                {
+                    AddVein(veintype, 50000, ConvertToVector3(i,j));
+                }
+            }
+        }
+
+
+        private static void BatchAddVein()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+
+            int x = 13;
+            int y = 11;
+
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x = 13;
+            y = 31;
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Fractal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Stone, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Crysrub, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x = 13;
+            y = 51;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x = 15;
+            y = 65;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+            x += 10;
+            AddVein(Oil, 175000, ConvertToVector3(x, y));
+        }
+
+
+        private static void BatchAddVein2()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+
+            int x = 13;
+            int y = 11;
+
+            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x = 13;
+            y = 31;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            x = 13;
+            y = 51;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+        }
+        private static void BatchAddVein3()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+
+            int x = 13;
+            int y = 11;
+
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x = 13;
+            y = 31;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x = 13;
+            y = 51;
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+        }
+
+        private static void BatchAddVein4()
+        {
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            var planet = GameMain.localPlanet;
+
+            int x = 13;
+            int y = 11;
+
+
+            x += 10;
+            AddVeinVeinByRange(Stone, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+
+            x = 13;
+            y = 31;
+
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            x += 10;
+            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+            x += 10;
+
+
+        }
+        /// <summary>
+        /// 添加矿脉
+        /// </summary>
+        /// <param name="veintype"></param>
+        /// <param name="number"></param>
+        /// <param name="pos"></param>
+        public static void AddVein(int veintype, int number, Vector3 pos)
+        {
+            var planet = GameMain.localPlanet;
+
+            VeinData vein = new VeinData()
+            {
+                amount = number,
+                type = (EVeinType)veintype,
+                pos = pos,
+                productId = LDB.veins.Select(veintype).MiningItem,
+                modelIndex = (short)LDB.veins.Select(veintype).ModelIndex
+            };
+            vein.id = planet.factory.AddVeinData(vein);
+            vein.colliderId = planet.physics.AddColliderData(LDB.veins.Select(veintype).prefabDesc.colliders[0].BindToObject(vein.id, 0, EObjectType.Vein, vein.pos, Quaternion.FromToRotation(Vector3.up, vein.pos.normalized)));
+            vein.modelId = planet.factoryModel.gpuiManager.AddModel(vein.modelIndex, vein.id, vein.pos, Maths.SphericalRotation(vein.pos, UnityEngine.Random.value * 360f));
+            vein.minerCount = 0;
+            planet.factory.AssignGroupIndexForNewVein(ref vein);
+            planet.factory.veinPool[vein.id] = vein;
+            planet.factory.RefreshVeinMiningDisplay(vein.id, 0, 0);
+            planet.factory.RecalculateVeinGroup(planet.factory.veinPool[vein.id].groupIndex);
+        }
 
 
 
         private static void ClearCurrentPlanetEnemies()
         {
+
+            buttonClearPlanet.enabled = false;
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss") ;
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(combinedString);
+            
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var planet = GameMain.localPlanet;
             ClearPlanetEnemies(planet);
+            buttonClearPlanet.enabled = true;
         }
 
 
@@ -289,8 +684,18 @@ namespace HardFog
                 {
                     if (forms[j].unitCount > 0)
                     {
-                        HardFog.Logger.LogInfo("clear DFGBaseComponent:" + dfgbaseComponent.id + "  -> form count ： " + forms[j].unitCount);
-                        forms[j].Clear();
+
+                        try
+                        {
+                            HardFog.Logger.LogInfo("clear DFGBaseComponent:" + dfgbaseComponent.id + "  -> form count ： " + forms[j].unitCount);
+                            forms[j].Clear();
+                        }
+                        catch (Exception ex)
+                        {
+                            HardFog.Logger.LogInfo("error to kill  forms" + j);
+                        }
+
+
                     }
 
                 }
@@ -303,12 +708,21 @@ namespace HardFog
                 //if (enemydata.id != i) continue;
                 if (enemyData.id != i) continue;
 
-                HardFog.Logger.LogInfo("KillEnemyFinally -> enemyData.id： " + enemyData.id);
+                try
+                {
+                    HardFog.Logger.LogInfo("KillEnemyFinally -> enemyData.id： " + enemyData.id);
 
-                var combatStatId = enemyData.combatStatId;
-                planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsbuffer[combatStatId].originAstroId, ETargetType.CombatStat);
-                planetFactory.skillSystem.combatStats.Remove(combatStatId);
-                planetFactory.KillEnemyFinally(player, i, ref CombatStat.empty);
+                    var combatStatId = enemyData.combatStatId;
+                    planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsbuffer[combatStatId].originAstroId, ETargetType.CombatStat);
+                    planetFactory.skillSystem.combatStats.Remove(combatStatId);
+                    planetFactory.KillEnemyFinally(player, i, ref CombatStat.empty);
+                }
+                catch (Exception ex)
+                {
+                    HardFog.Logger.LogInfo("error to kill  KillEnemyFinally" + enemyData.id);
+                }
+
+
 
             }
 
@@ -336,6 +750,16 @@ namespace HardFog
 
         private static void ClearStarEnemies()
         {
+
+            buttonClearStar.enabled = false;
+
+
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(combinedString);
+
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var planet = GameMain.localPlanet;
@@ -546,9 +970,17 @@ namespace HardFog
 
             }
 
+            buttonClearStar.enabled = true;
+
         }
         private static void StarsFillHive()
         {
+            buttonFillHive.enabled = false;
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(combinedString);
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var galaxy = GameMain.galaxy;
@@ -619,6 +1051,14 @@ namespace HardFog
 
         private static void StarResetHive()
         {
+            buttonResetHive.enabled = false;
+
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(combinedString);
+
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var planet = GameMain.localPlanet;
@@ -633,6 +1073,7 @@ namespace HardFog
                 enemyDFHiveSystem.SetForNewGame();
                 enemyDFHiveSystem = enemyDFHiveSystem.nextSibling;
             }
+            buttonResetHive.enabled = true;
         }
 
         private static void SetCoreInvincible()

@@ -67,3 +67,5 @@ D:\Desktop\DSPmod\DSPmod\obj\Release\HardFog.dll
 D:\Desktop\DSPmod\DSPmod\obj\Release\HardFog.pdb
 D:\Desktop\DSPmod\DSPmod\bin\Release\0Harmony.dll
 D:\Desktop\DSPmod\DSPmod\bin\Release\0Harmony.xml
+D:\Desktop\DSPmod\DSPmod\bin\Release\MonoMod.RuntimeDetour.dll
+D:\Desktop\DSPmod\DSPmod\bin\Release\MonoMod.RuntimeDetour.xml
