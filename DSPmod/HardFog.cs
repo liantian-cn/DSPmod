@@ -20,10 +20,7 @@ namespace HardFog
     public class HardFog : BaseUnityPlugin
     {
         private static ConfigEntry<bool> MoreFrequentRelaysEnable;
-        private static ConfigEntry<bool> DysonSphereDebuffImmunityEnable;
-        private static ConfigEntry<bool> SuperRayReceptionEnable;
-        private static ConfigEntry<bool> DFSCoreSuperEnergyEnable;
-        private static ConfigEntry<bool> DFGBaseSuperEnergyEnable;
+
 
         private static int Iron = 1;
         private static int Copper = 2;
@@ -44,6 +41,8 @@ namespace HardFog
         private static UIButton buttonClearStar;
         private static UIButton buttonFillHive;
         private static UIButton buttonResetHive;
+        private static UIButton buttonAddVein;
+
 
 
 
@@ -56,41 +55,33 @@ namespace HardFog
         public void Awake()
         {
             MoreFrequentRelaysEnable = Config.Bind("FogCheats", "MoreFrequentRelays", false, "巢穴更频繁的发送的中继站");
-            DysonSphereDebuffImmunityEnable = Config.Bind("Cheats", "DysonSphereDebuffImmunity", false, "黑雾无法偷电");
-            SuperRayReceptionEnable = Config.Bind("Cheats", "SuperRayReception", false, "射线接收器满速接收");
-            DFSCoreSuperEnergyEnable = Config.Bind("FogCheats", "DFSCoreSuperEnergy", false, "玩家所在星系黑雾巢穴满能量");
-            DFGBaseSuperEnergyEnable = Config.Bind("FogCheats", "DFGBaseSuperEnergy", false, "黑雾地面基地满能量");
+
 
             HardFog.Logger = base.Logger;
             Harmony.CreateAndPatchAll(typeof(HardFog));
 
 
-            I18N.Add("Clear the enemies on the current planet", "Clear the enemies on the current planet", "清理当前星球的黑雾");
-            I18N.Add("Clear the space enemies of the current star", "Clear the space enemies of the current star", "清理当前恒星的太空黑雾");
-            I18N.Add("Fill the galaxy with Hive", "Fill the galaxy with Hive", "为所有星系填满黑雾巢穴");
-            I18N.Add("Reset the Hive in the current star", "Reset the Hive in the current star", "为当前恒星重置黑雾巢穴");
+            I18N.Add("clear_current_planet", "clear all enemies on current planet", "清理当前星球的黑雾");
+            I18N.Add("clear_current_star", "clear all enemies on current star", "清理当前恒星的太空黑雾");
+            I18N.Add("fill_hive", "Fill the galaxy with Hive", "为整个星系填满黑雾巢穴");
+            I18N.Add("StarResetHive", "reset Hive in the current star", "为当前恒星重置黑雾巢穴");
+            I18N.Add("StarFillHive", "Fill Engery in the current star", "为当前恒星的黑雾巢穴补充能量");
             I18N.Add("More Frequent Relays", "The HIVE is sending out Relays more frequently.", "黑雾巢穴更频繁的发送中继站");
-            I18N.Add("Set HiveCore Invincible", "The HiveCore in the current star is invulnerable to attacks", "当前恒星的黑雾巢穴核心无法被攻击");
-            I18N.Add("Set HiveCore Vulnerable", "The HiveCore in the current star is vulnerable to attacks.", "当前恒星的黑雾巢穴核心可以被攻击");
-            I18N.Add("Fog cannot steal electricity", "Fog cannot steal electricity", "黑雾无法偷取电力");
-            I18N.Add("the ray receiver receives at full power", "ray receiver receives at full power", "射线接收器满接收");
-            I18N.Add("The Hive in the current star get full energy and matter", "The Hive in the current star get full energy and matter", "当前恒星的黑雾巢穴满能量/物质");
-            I18N.Add("The Fogbase get full energy and matter", "The Fog core on base get full energy and matter", "黑雾地面核心获得满能量/物质");
-            I18N.Add("Clear all vein on the current planet", "Clear all vein on the current planet", "清除矿脉");
-            I18N.Add("Batch add vein on the current planet(candy)", "Batch add vein on the current planet(candy)", "批量添加矿脉(糖)");
-            I18N.Add("Batch add vein on the current planet(2)", "Batch add vein on the current planet(2)", "批量添加矿脉(2)");
-            I18N.Add("Batch add vein on the current planet(3)", "Batch add vein on the current planet(3)", "批量添加矿脉(3)");
-            I18N.Add("Batch add vein on the current planet(4)", "Batch add vein on the current planet(4)", "批量添加矿脉(4)");
-            I18N.Add("Reset the Hive in the current star", "reset all vein on the current planet", "重建矿物储量");
+            I18N.Add("clear_all_vein", "clear all vein on current planet", "清除矿脉");
+            I18N.Add("add-vein", "add vein", "添加矿脉(通用)");
+            I18N.Add("add-vein-2", "add vein", "添加矿脉(纯糖)");
+            I18N.Add("add-vein-3", "add vein", "添加矿脉(增产)");
+            I18N.Add("StarResetHive", "Reset Hive(current star)", "重建当前星系的黑雾");
+            I18N.Add("add-ruins", "Add Ruins", "添加废墟");
             I18N.Apply();
 
             MyConfigWindow.OnUICreated += CreateUI;
 
             MoreFrequentRelaysEnable.SettingChanged += (_, _) => MoreFrequentRelaysPatch.Enable(MoreFrequentRelaysEnable.Value);
-            DysonSphereDebuffImmunityEnable.SettingChanged += (_, _) => DysonSphereDebuffImmunityPatch.Enable(DysonSphereDebuffImmunityEnable.Value);
-            SuperRayReceptionEnable.SettingChanged += (_, _) => SuperRayReceptionPatch.Enable(SuperRayReceptionEnable.Value);
-            DFSCoreSuperEnergyEnable.SettingChanged += (_, _) => DFSCoreSuperEnergyPatch.Enable(DFSCoreSuperEnergyEnable.Value);
-            DFGBaseSuperEnergyEnable.SettingChanged += (_, _) => DFGBaseSuperEnergyPatch.Enable(DFGBaseSuperEnergyEnable.Value);
+            //DysonSphereDebuffImmunityEnable.SettingChanged += (_, _) => DysonSphereDebuffImmunityPatch.Enable(DysonSphereDebuffImmunityEnable.Value);
+            //SuperRayReceptionEnable.SettingChanged += (_, _) => SuperRayReceptionPatch.Enable(SuperRayReceptionEnable.Value);
+            //DFSCoreSuperEnergyEnable.SettingChanged += (_, _) => DFSCoreSuperEnergyPatch.Enable(DFSCoreSuperEnergyEnable.Value);
+            //DFGBaseSuperEnergyEnable.SettingChanged += (_, _) => DFGBaseSuperEnergyPatch.Enable(DFGBaseSuperEnergyEnable.Value);
             HardFog.Logger.LogInfo("HardFog 初始化");
 
 
@@ -107,34 +98,45 @@ namespace HardFog
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, "Hard fog", "tab-group-hard-fog");
             var tab1 = wnd.AddTab(_windowTrans, "General");
-            buttonClearPlanet = wnd.AddButton(x, y, 200, tab1, "Clear the enemies on the current planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
+            buttonClearPlanet = wnd.AddButton(x, y, 200, tab1, "clear_current_planet", 16, "button-clear-planet", ClearCurrentPlanetEnemies);
             y += 36f;
-            buttonClearStar = wnd.AddButton(x, y, 200, tab1, "Clear the space enemies of the current star", 16, "button-clear-star", ClearStarEnemies);
+            buttonClearStar = wnd.AddButton(x, y, 200, tab1, "clear_current_star", 16, "button-clear-star", ClearCurrentStarEnemies);
+            //y += 36f;
+            //buttonClearAllStar = wnd.AddButton(x, y, 200, tab1, "clear_all_star", 16, "button-clear-all-star", ClearAllStarEnemies);
             y += 36f;
-            buttonFillHive = wnd.AddButton(x, y, 200, tab1, "Fill the galaxy with Hive", 16, "button-fill-hive", StarsFillHive);
+            buttonFillHive = wnd.AddButton(x, y, 200, tab1, "fill_hive", 16, "button-fill-hive", StarsFillHive);
             y += 36f;
-            buttonResetHive = wnd.AddButton(x, y, 200, tab1, "Reset the Hive in the current star", 16, "button-reset-hive", StarResetHive);
+            buttonResetHive = wnd.AddButton(x, y, 200, tab1, "StarResetHive", 16, "button-reset-hive", StarResetHive);
+            y += 36f;
+            buttonFillHive = wnd.AddButton(x, y, 200, tab1, "StarFillHive", 16, "button-fill-hive", FillStarHiveEnergy);
+
+
+
             y += 36f;
             MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.MoreFrequentRelaysEnable, "More Frequent Relays");
             y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Invincible", 12, "button-set-core-invincible", SetCoreInvincible);
-            y += 36f;
-            wnd.AddButton(x, y, 200, tab1, "Set HiveCore Vulnerable", 12, "button-set-core-vulnerable", SetCoreVulnerable);
-            y += 36f;
-            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DysonSphereDebuffImmunityEnable, "Fog cannot steal electricity");
-            y += 36f;
-            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.SuperRayReceptionEnable, "the ray receiver receives at full power");
-            y += 36f;
-            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFSCoreSuperEnergyEnable, "The Hive in the current star get full energy and matter");
-            y += 36f;
-            MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFGBaseSuperEnergyEnable, "The Fogbase get full energy and matter");
+            wnd.AddButton(x, y, 200, tab1, "add-ruins", 16, "button-add-ruins", AddRuins);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Set HiveCore Invincible", 12, "button-set-core-invincible", SetCoreInvincible);
+            //y += 36f;
+            //wnd.AddButton(x, y, 200, tab1, "Set HiveCore Vulnerable", 12, "button-set-core-vulnerable", SetCoreVulnerable);
+            //y += 36f;
+            //MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DysonSphereDebuffImmunityEnable, "Fog cannot steal electricity");
+            //y += 36f;
+            //MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.SuperRayReceptionEnable, "the ray receiver receives at full power");
+            //y += 36f;
+            //MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFSCoreSuperEnergyEnable, "The Hive in the current star get full energy and matter");
+            //y += 36f;
+            //MyCheckBox.CreateCheckBox(x, y, tab1, HardFog.DFGBaseSuperEnergyEnable, "The Fogbase get full energy and matter");
             x = 330f;
             y = 10f;
-            wnd.AddButton(x, y, 200, tab1, "Clear all vein on the current planet", 16, "button-clear-vein", ClearAllVein);
-            //y += 36f;
-            //wnd.AddButton(x, y, 200, tab1, "reset all vein on the current planet ", 16, "button-wealt-vein", WealtAllVein);
-            //y += 36f;
-            //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(candy)", 16, "button-batch-add-vein", BatchAddVein);
+            wnd.AddButton(x, y, 200, tab1, "clear_all_vein", 16, "button-clear-vein", ClearAllVein);
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "add-vein", 16, "button-add-vein", BatchAddVein);
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "add-vein-2", 16, "button-add-vein-2", BatchAddVein2);
+            y += 36f;
+            wnd.AddButton(x, y, 200, tab1, "add-vein-3", 16, "button-add-vein-3", BatchAddVein3);
             //y += 36f;
             //wnd.AddButton(x, y, 200, tab1, "Batch add vein on the current planet(2)", 16, "button-batch-add-vein2", BatchAddVein2);
             //y += 36f;
@@ -179,118 +181,118 @@ namespace HardFog
 
         }
 
-        private static class DysonSphereDebuffImmunityPatch
-        {
-            private static Harmony _patch;
+        //private static class DysonSphereDebuffImmunityPatch
+        //{
+        //    private static Harmony _patch;
 
-            public static void Enable(bool enable)
-            {
-                if (enable)
-                {
-                    _patch = Harmony.CreateAndPatchAll(typeof(DysonSphereDebuffImmunityPatch));
-                    return;
-                }
-                _patch?.UnpatchSelf();
-                _patch = null;
-            }
+        //    public static void Enable(bool enable)
+        //    {
+        //        if (enable)
+        //        {
+        //            _patch = Harmony.CreateAndPatchAll(typeof(DysonSphereDebuffImmunityPatch));
+        //            return;
+        //        }
+        //        _patch?.UnpatchSelf();
+        //        _patch = null;
+        //    }
 
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(DysonSphere), "energyDFHivesDebuffCoef", MethodType.Getter)]
-            public static bool EnergyDFHivesDebuffCoef_Patch(ref double __result)
-            {
+        //    [HarmonyPrefix]
+        //    [HarmonyPatch(typeof(DysonSphere), "energyDFHivesDebuffCoef", MethodType.Getter)]
+        //    public static bool EnergyDFHivesDebuffCoef_Patch(ref double __result)
+        //    {
 
-                __result = 1.0;
-                return false;
+        //        __result = 1.0;
+        //        return false;
 
-            }
-
-
-        }
+        //    }
 
 
-        private static class SuperRayReceptionPatch
-        {
-            private static Harmony _patch;
-
-            public static void Enable(bool enable)
-            {
-                if (enable)
-                {
-                    _patch = Harmony.CreateAndPatchAll(typeof(SuperRayReceptionPatch));
-                    return;
-                }
-                _patch?.UnpatchSelf();
-                _patch = null;
-            }
-
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(DysonSphere), "energyRespCoef", MethodType.Getter)]
-            public static bool energyRespCoef_Patch(ref float __result)
-            {
-
-                __result = 1f;
-                return false;
-
-            }
+        //}
 
 
-        }
+        //private static class SuperRayReceptionPatch
+        //{
+        //    private static Harmony _patch;
 
-        private static class DFSCoreSuperEnergyPatch
-        {
-            private static Harmony _patch;
+        //    public static void Enable(bool enable)
+        //    {
+        //        if (enable)
+        //        {
+        //            _patch = Harmony.CreateAndPatchAll(typeof(SuperRayReceptionPatch));
+        //            return;
+        //        }
+        //        _patch?.UnpatchSelf();
+        //        _patch = null;
+        //    }
 
-            public static void Enable(bool enable)
-            {
-                if (enable)
-                {
-                    _patch = Harmony.CreateAndPatchAll(typeof(DFSCoreSuperEnergyPatch));
-                    return;
-                }
-                _patch?.UnpatchSelf();
-                _patch = null;
-            }
+        //    [HarmonyPrefix]
+        //    [HarmonyPatch(typeof(DysonSphere), "energyRespCoef", MethodType.Getter)]
+        //    public static bool energyRespCoef_Patch(ref float __result)
+        //    {
 
-            // 增加黑雾巢穴能量
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(DFSCoreComponent), "LogicTick")]
-            public static void DFSCoreComponentLogicTick(DFSCoreComponent __instance, EnemyDFHiveSystem hive)
-            {
-                if (hive.isLocal)
-                {
-                    ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
-                    ptr.matter = ptr.maxMatter;
-                    ptr.energy = ptr.maxEnergy;
-                }
-            }
-        }
+        //        __result = 1f;
+        //        return false;
+
+        //    }
 
 
-        private static class DFGBaseSuperEnergyPatch
-        {
-            private static Harmony _patch;
+        //}
 
-            public static void Enable(bool enable)
-            {
-                if (enable)
-                {
-                    _patch = Harmony.CreateAndPatchAll(typeof(DFGBaseSuperEnergyPatch));
-                    return;
-                }
-                _patch?.UnpatchSelf();
-                _patch = null;
-            }
-            // 增加基地核心的能量
-            [HarmonyPrefix]
-            [HarmonyPatch(typeof(DFGBaseComponent), "LogicTick")]
-            public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref EnemyBuilderComponent builder)
-            {
+        //private static class DFSCoreSuperEnergyPatch
+        //{
+        //    private static Harmony _patch;
 
-                builder.matter = builder.maxMatter;
-                builder.energy = builder.maxEnergy;
+        //    public static void Enable(bool enable)
+        //    {
+        //        if (enable)
+        //        {
+        //            _patch = Harmony.CreateAndPatchAll(typeof(DFSCoreSuperEnergyPatch));
+        //            return;
+        //        }
+        //        _patch?.UnpatchSelf();
+        //        _patch = null;
+        //    }
 
-            }
-        }
+        //    // 增加黑雾巢穴能量
+        //    [HarmonyPrefix]
+        //    [HarmonyPatch(typeof(DFSCoreComponent), "LogicTick")]
+        //    public static void DFSCoreComponentLogicTick(DFSCoreComponent __instance, EnemyDFHiveSystem hive)
+        //    {
+        //        if (hive.isLocal)
+        //        {
+        //            ref EnemyBuilderComponent ptr = ref hive.builders.buffer[__instance.builderId];
+        //            ptr.matter = ptr.maxMatter;
+        //            ptr.energy = ptr.maxEnergy;
+        //        }
+        //    }
+        //}
+
+
+        //private static class DFGBaseSuperEnergyPatch
+        //{
+        //    private static Harmony _patch;
+
+        //    public static void Enable(bool enable)
+        //    {
+        //        if (enable)
+        //        {
+        //            _patch = Harmony.CreateAndPatchAll(typeof(DFGBaseSuperEnergyPatch));
+        //            return;
+        //        }
+        //        _patch?.UnpatchSelf();
+        //        _patch = null;
+        //    }
+        //    // 增加基地核心的能量
+        //    [HarmonyPrefix]
+        //    [HarmonyPatch(typeof(DFGBaseComponent), "LogicTick")]
+        //    public static void DFGBaseComponentLogicTick(DFGBaseComponent __instance, ref EnemyBuilderComponent builder)
+        //    {
+
+        //        builder.matter = builder.maxMatter;
+        //        builder.energy = builder.maxEnergy;
+
+        //    }
+        //}
 
         private static void ClearAllVein()
         {
@@ -325,8 +327,9 @@ namespace HardFog
             {
                 if (i.type != EVeinType.Oil)
                 {
-                    planet.factory.veinPool[i.id].amount = random.Next(8500,11500);
-                } else
+                    planet.factory.veinPool[i.id].amount = random.Next(8500, 11500);
+                }
+                else
                 {
                     planet.factory.veinPool[i.id].amount = random.Next(150000, 200000);
                 }
@@ -337,7 +340,7 @@ namespace HardFog
         }
 
 
-        private static Vector3  ConvertToVector3(int X, int Y)
+        private static Vector3 ConvertToVector3(int X, int Y)
         {
             var planet = GameMain.localPlanet;
             float radius = planet.radius;
@@ -359,13 +362,13 @@ namespace HardFog
 
         }
 
-        private static void AddVeinVeinByRange(int veintype, int x_start,int x_end,int y_start,int y_end)
+        private static void AddVeinVeinByRange(int veintype, int x_start, int x_end, int y_start, int y_end)
         {
             for (int i = x_start; i < x_end; i++)
             {
                 for (int j = y_start; j < y_end; j++)
                 {
-                    AddVein(veintype, 50000, ConvertToVector3(i,j));
+                    AddVein(veintype, 50, ConvertToVector3(i, j));
                 }
             }
         }
@@ -378,239 +381,208 @@ namespace HardFog
             var planet = GameMain.localPlanet;
 
             int x = 13;
-            int y = 11;
+            int y = 4;
 
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 3);  // 铁
             x += 10;
-            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 3);  // 铜
             x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 3);  // 铁
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 3); // 铜
             x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 3); // 钛
+
             x = 13;
-            y = 31;
-            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            y = 24;
+
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 3); // 钛
             x += 10;
-            AddVeinVeinByRange(Fractal, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Stone, x, x + 5, y, y + 3);  //石
             x += 10;
-            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
-            AddVeinVeinByRange(Stone, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 3); // 可燃冰
             x += 10;
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
-            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 3); // 金伯利
             x += 10;
-            AddVeinVeinByRange(Crysrub, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Fractal, x, x + 5, y, y + 3);   //分型
             x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 3); //光栅
+
+
             x = 13;
-            y = 51;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            y = 44;
+
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3); //刺笋
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 3);  // 单极
             x += 10;
-            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
             x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 3);  // 单极
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Crysrub, x, x + 5, y, y + 3); //有机晶体
+
             x = 15;
             y = 65;
             AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
-            AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
             AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
-            AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
             AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
-            AddVein(Oil, 175000, ConvertToVector3(x, y));
             x += 10;
             AddVein(Oil, 175000, ConvertToVector3(x, y));
-            x += 10;
-            AddVein(Oil, 175000, ConvertToVector3(x, y));
+
         }
 
 
         private static void BatchAddVein2()
         {
+            
             var player = GameMain.mainPlayer;
             if (player == null) return;
-            var planet = GameMain.localPlanet;
 
-            int x = 13;
-            int y = 11;
 
-            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+
+
+            // 煤  硅  铜  硅  钛  铁  硅  铜  钛  石
+            // 可燃冰  金伯利  分型  光栅  刺笋  单极  光栅  有机晶体  单极  煤
+
+
+            int x = 3;
+            int y = 4;
+
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 3);  // 铜
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 3); // 钛
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Iron, x, x + 5, y, y + 3);  // 铁
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 3); // 硅
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
-            x = 13;
-            y = 31;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Copper, x, x + 5, y, y + 3);  // 铜
             x += 10;
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 3); // 钛
             x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Stone, x, x + 5, y, y + 3);  //石
+
+            x = 3;
+            y = 24;
+
+            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 3); // 可燃冰
             x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 3); // 金伯利
             x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Fractal, x, x + 5, y, y + 3);   //分型
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 3); //光栅
             x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
             x += 10;
-            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
-            x = 13;
-            y = 51;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 3);  // 单极
             x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Grat, x, x + 5, y, y + 3); //光栅
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Crysrub, x, x + 5, y, y + 3); //有机晶体
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Mag, x, x + 5, y, y + 3);  // 单极
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+
+            x = 15;
+            y = 45;
+            AddVein(Oil, 225000, ConvertToVector3(x, y));
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVein(Oil, 225000, ConvertToVector3(x, y));
             x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
+            x += 10;
+            AddVein(Oil, 225000, ConvertToVector3(x, y));
+            x += 10;
+            x += 10;
+            AddVein(Oil, 225000, ConvertToVector3(x, y));
+
         }
+
+
+
+
         private static void BatchAddVein3()
         {
+
             var player = GameMain.mainPlayer;
             if (player == null) return;
-            var planet = GameMain.localPlanet;
-
-            int x = 13;
-            int y = 11;
-
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x = 13;
-            y = 31;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x = 13;
-            y = 51;
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Coal, x, x + 5, y, y + 7);
-        }
-
-        private static void BatchAddVein4()
-        {
-            var player = GameMain.mainPlayer;
-            if (player == null) return;
-            var planet = GameMain.localPlanet;
-
-            int x = 13;
-            int y = 11;
 
 
-            x += 10;
-            AddVeinVeinByRange(Stone, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Iron, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Copper, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Silicium, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Titanium, x, x + 5, y, y + 7);
-            x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
-            x += 10;
 
-            x = 13;
-            y = 31;
+            // 煤 刺笋 煤 刺笋 金伯利 刺笋 煤 刺笋 煤
+            // 金伯利 煤 刺笋 煤 刺笋 煤 刺笋 煤 刺笋
 
+
+            int x = 8;
+            int y = 4;
+
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
             x += 10;
-            AddVeinVeinByRange(Grat, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
             x += 10;
-            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 3); // 金伯利
             x += 10;
-            AddVeinVeinByRange(Mag, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
             x += 10;
-            AddVeinVeinByRange(Fireice, x, x + 5, y, y + 7);
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
             x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+
+            x = 8;
+            y = 24;
+
+            AddVeinVeinByRange(Diamond, x, x + 5, y, y + 3); // 金伯利
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
+            x += 10;
+            AddVeinVeinByRange(Coal, x, x + 5, y, y + 3);   // 煤
+            x += 10;
+            AddVeinVeinByRange(Bamboo, x, x + 5, y, y + 3);  // 刺笋
+
 
 
         }
+
         /// <summary>
         /// 添加矿脉
         /// </summary>
@@ -646,11 +618,11 @@ namespace HardFog
 
             buttonClearPlanet.enabled = false;
             DateTime now = DateTime.Now;
-            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss") ;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
             string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
             string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
             GameSave.SaveCurrentGame(combinedString);
-            
+
             var player = GameMain.mainPlayer;
             if (player == null) return;
             var planet = GameMain.localPlanet;
@@ -747,8 +719,50 @@ namespace HardFog
 
 
 
+        private static void FillStarHiveEnergy()
+        {
 
-        private static void ClearStarEnemies()
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string combinedString = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(combinedString);
+
+            var player = GameMain.mainPlayer;
+            if (player == null) return;
+            //var planet = GameMain.localPlanet;
+            var star = GameMain.localStar;
+            SpaceSector spaceSector = GameMain.spaceSector;
+
+            EnemyDFHiveSystem enemyDFHiveSystem = spaceSector.dfHives[star.index];
+
+            while (enemyDFHiveSystem != null)
+            {
+                if (enemyDFHiveSystem.isAlive)
+                {
+
+                    // 清空核心能量
+                    for (var i = enemyDFHiveSystem.cores.cursor - 1; i > 0; i--)
+                    {
+
+                        ref EnemyBuilderComponent ptr = ref enemyDFHiveSystem.builders.buffer[enemyDFHiveSystem.cores.buffer[i].builderId];
+                        ptr.matter = ptr.maxMatter;
+                        ptr.energy = ptr.maxEnergy;
+
+
+                    }
+
+                }
+                // 下一个巢穴
+                enemyDFHiveSystem = enemyDFHiveSystem.nextSibling;
+            }
+
+            SetCoreInvincible(star);
+
+        }
+
+
+        private static void ClearCurrentStarEnemies()
         {
 
             buttonClearStar.enabled = false;
@@ -764,6 +778,24 @@ namespace HardFog
             if (player == null) return;
             var planet = GameMain.localPlanet;
             var star = GameMain.localStar;
+            ClearStarEnemies(star);
+
+
+            buttonClearStar.enabled = true;
+
+        }
+
+
+
+
+
+
+
+
+        private static void ClearStarEnemies(StarData star)
+        {
+
+
             SpaceSector spaceSector = GameMain.spaceSector;
             // 待杀掉的ID
             List<int> needKillEnemyIds = new List<int>();
@@ -969,8 +1001,7 @@ namespace HardFog
                 }
 
             }
-
-            buttonClearStar.enabled = true;
+            SetCoreInvincible(star);
 
         }
         private static void StarsFillHive()
@@ -1061,7 +1092,7 @@ namespace HardFog
 
             var player = GameMain.mainPlayer;
             if (player == null) return;
-            var planet = GameMain.localPlanet;
+            //var planet = GameMain.localPlanet;
             var star = GameMain.localStar;
             SpaceSector spaceSector = GameMain.spaceSector;
 
@@ -1076,12 +1107,12 @@ namespace HardFog
             buttonResetHive.enabled = true;
         }
 
-        private static void SetCoreInvincible()
+        private static void SetCoreInvincible(StarData star)
         {
-            var player = GameMain.mainPlayer;
-            if (player == null) return;
-            var planet = GameMain.localPlanet;
-            var star = GameMain.localStar;
+            //var player = GameMain.mainPlayer;
+            //if (player == null) return;
+            ////var planet = GameMain.localPlanet;
+            //var star = GameMain.localStar;
             SpaceSector spaceSector = GameMain.spaceSector;
 
 
@@ -1128,6 +1159,81 @@ namespace HardFog
             }
         }
 
+
+        private static List<Vector3> GeneratePoints(int n)
+        {
+            // 获取当前行星（与ConvertToVector3一致）
+            var planet = GameMain.localPlanet;
+            if (planet == null) throw new InvalidOperationException("No local planet available");
+            float radius = planet.radius;
+
+            // 验证输入范围
+            if (n < 10 || n > 200)
+                throw new ArgumentException("n must be between 10 and 200");
+
+            List<Vector3> points = new List<Vector3>();
+            double goldenAngle = Math.PI * (3 - Math.Sqrt(5));  // 黄金角度 ≈137.5°
+
+            for (int i = 0; i < n; i++)
+            {
+                // 1. 计算纬度（Y轴）参数 - 映射到行星坐标系
+                double normalizedY = 1 - (double)i / (n - 1) * 2;  // 从1（北极）到-1（南极）
+                double latitude = Math.Asin(normalizedY);  // 转换为纬度弧度
+
+                // 2. 计算当前纬度圆半径（考虑行星实际半径）
+                double radiusAtLatitude = Math.Cos(latitude) * radius;
+
+                // 3. 计算经度角度（黄金角累积）
+                double longitude = goldenAngle * i;  // 经度弧度
+
+                // 4. 计算实际坐标（与ConvertToVector3坐标系一致）
+                double x = Math.Sin(longitude) * radiusAtLatitude;
+                double z = Math.Cos(longitude) * radiusAtLatitude;
+                double y = Math.Sin(latitude) * radius;  // Y轴直接使用纬度正弦
+
+                // 5. 添加到结果集
+                points.Add(new Vector3((float)x, (float)y, (float)z));
+            }
+
+            return points;
+        }
+
+
+
+        private static void AddRuins()
+        {
+            // 获取当前行星
+            var planet = GameMain.localPlanet;
+            if (planet == null)
+            {
+                Debug.LogError("AddRuins failed: No local planet available");
+                return;
+            }
+
+            // 1. 生成30个坐标点
+            List<Vector3> points = GeneratePoints(30);
+
+            // 2. 为每个点添加废墟
+            foreach (Vector3 pos in points)
+            {
+                // 获取废墟模型原型 (使用默认模型索引)
+                //ModelProto modelProto = LDB.models.Select(1); // 使用1作为默认废墟模型ID
+
+                // 创建废墟数据
+                RuinData ruinData = default(RuinData);
+                ruinData.modelIndex = (short)0;
+                ruinData.lifeTime = 30; // 固定生命周期为30秒
+                ruinData.pos = pos;
+
+                // 3. 计算旋转 (参考AddVein实现)
+                ruinData.rot = Maths.SphericalRotation(ruinData.pos, UnityEngine.Random.value * 360f);
+
+                // 添加废墟到行星工厂
+                ruinData.id = planet.factory.AddRuinDataWithComponent(ruinData);
+            }
+
+            Debug.Log($"Successfully added {points.Count} ruins to the planet");
+        }
 
 
 
