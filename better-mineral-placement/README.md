@@ -414,49 +414,84 @@
 
 ## 对“更好的矿物位置”mod 的直接启发
 
+你的目标现在可以明确收敛成一句话：
+
+不改原版矿物生成数量、不改原版矿种分布概率，只在原版 `GenerateVeins()` 完成之后，把已经生成好的矿点移动到一个指定纬度范围。
+
+这意味着，mod 最好不要接管原版生成流程本身，而是做一个“生成后重排位置”的后处理层。
+
 ### 最推荐的改法
 
-最稳的方案，是在矿物还停留在 `PlanetData.data.veinPool` 时就调整位置。
+最稳的方案，是在矿物还停留在 `PlanetData.data.veinPool` 时就调整位置，但前提是：
+
+- 原版 `GenerateVeins()` 已经完整执行完
+- 你不再调用任何原版随机生成逻辑
+- 你只改 `VeinData.pos`
+- 你尽量不改 `VeinData.amount`
+- 你尽量不改矿点总数
 
 原因：
 
+- 这时原版已经把“矿种、矿量、矿点数量、groupIndex”都算好了
 - 这时还没创建模型和碰撞
 - 改完后只要重新 `SummarizeVeinGroups()`
 - 不需要处理 `factory` 里的显示、碰撞、哈希、矿机覆盖更新
 
 ### 推荐拦截点
 
-#### 方案 A：直接 patch `GenerateVeins()`
-
-适合：
-
-- 你想重写矿组中心选点规则
-- 你想控制矿和出生点/赤道/两极/海岸线的关系
+最符合你当前思路的，不是“重写生成”，而是“生成后搬运”。
 
 建议入口：
 
-- `PlanetAlgorithm.GenerateVeins()`
-- `PlanetAlgorithm7.GenerateVeins()`
-- `PlanetAlgorithm11.GenerateVeins()`
-- `PlanetAlgorithm12.GenerateVeins()`
-- `PlanetAlgorithm13.GenerateVeins()`
+- `PlanetAlgorithm.GenerateVeins()` 的 postfix
+- `PlanetAlgorithm7.GenerateVeins()` 的 postfix
+- `PlanetAlgorithm11.GenerateVeins()` 的 postfix
+- `PlanetAlgorithm12.GenerateVeins()` 的 postfix
+- `PlanetAlgorithm13.GenerateVeins()` 的 postfix
 
-#### 方案 B：在 `GenerateVeins()` 之后重排 `veinPool`
+原因很直接：
 
-适合：
+- 这些方法是原版矿物真正落入 `PlanetRawData.veinPool` 的位置
+- postfix 能保证原版随机生成先完整跑完
+- 你后面做的是确定性的坐标重映射，而不是再参与原版随机抽样
 
-- 你不想重写原版矿种概率
-- 只想把已生成矿点重新排布得更合理
+### 你这个 mod 的建议流程
 
-建议流程：
+建议流程应该改成下面这样：
 
 1. 等原版 `GenerateVeins()` 跑完
 2. 遍历 `planet.data.veinPool`
-3. 修改 `VeinData.pos`
-4. 必要时重设 `groupIndex`
-5. 调用 `planet.SummarizeVeinGroups()`
+3. 保持每个 `VeinData.type`、`amount`、`productId` 不变
+4. 按你的目标纬度范围，重新计算 `VeinData.pos`
+5. 尽量保留原有 `groupIndex`
+6. 调用 `planet.SummarizeVeinGroups()`
 
-这是我更推荐的第一版 mod 切入点。
+这里最重要的是第 3 条：
+
+你这个 mod 的本质，不应该是“重新生成矿”，而应该是“搬运已经生成好的矿”。
+
+### 纬度搬运时建议保留的东西
+
+为了保证“原版数量不变”，后处理时最好保留这些字段：
+
+- `VeinData.type`
+- `VeinData.amount`
+- `VeinData.productId`
+- `VeinData.modelIndex`
+- `VeinData.groupIndex`
+- `data.veinCursor`
+
+真正应该动的，主要只有：
+
+- `VeinData.pos`
+
+如果你后面想让一个矿组整体搬到同一纬度带，最理想的做法是：
+
+- 先按 `groupIndex` 分组
+- 先决定每个矿组中心的新纬度
+- 再把组内矿点相对中心的小范围形状一起平移/旋转过去
+
+这样会比“逐点单独投影到纬度带”更接近原版矿组形状。
 
 ### 不太推荐的改法
 
@@ -469,20 +504,193 @@
 - 矿组统计
 - 已放置矿机的覆盖关系
 
-源码里确实有重算矿组和刷新显示的方法，但运行时改动成本更高。
+源码里确实有重算矿组和刷新显示的方法，但运行时改动成本更高，也更容易漏同步。
 
-## 对这个 mod 的建议实现方向
+## 原版随机种子机制
 
-如果 mod 名字叫“更好的矿物位置”，我建议把目标收窄成下面三种之一：
+你现在最关心的问题，其实是：
 
-1. 保持原版矿种与矿量不变，只优化矿组的地形可达性和集中度。
-2. 保持原版稀有矿概率不变，但让同类矿更容易形成适合摆矿机的形状。
-3. 保持出生星资源保底逻辑不变，只优化非出生星的矿组布局。
+原版随机数是怎么来的，以及怎样在 mod 里不破坏这个机制。
 
-原因很直接：
+答案是：原版是分层种子、局部重新初始化随机数状态的。
 
-- 原版已经把“矿种出现概率”和“特殊恒星奖励”写得很重
-- 如果第一版同时改概率、数量、位置，后面很难判断问题出在分布逻辑还是平衡逻辑
+### 1. 银河级种子
+
+银河生成从 `gameDesc.galaxySeed` 开始：
+
+- `UniverseGen.CreateGalaxy(GameDesc gameDesc)`
+- `DotNet35Random dotNet35Random = new DotNet35Random(galaxySeed)`
+
+然后它不断 `Next()`，给每颗星分配自己的 seed。
+
+源码位置：
+
+- `Assembly-CSharp/UniverseGen.cs:30-43`
+- `Assembly-CSharp/UniverseGen.cs:64-99`
+
+### 2. 行星级种子
+
+创建星球时，`PlanetGen.CreatePlanet(...)` 同时接收两个种子：
+
+- `info_seed`
+- `gen_seed`
+
+然后写入：
+
+- `planetData.infoSeed = info_seed`
+- `planetData.seed = gen_seed`
+
+源码位置：
+
+- `Assembly-CSharp/PlanetGen.cs:23-31`
+
+这两个种子用途不同：
+
+- `info_seed` 更偏向轨道、名字、主题选择、样式等“行星信息”
+- `gen_seed` 更偏向地形、植被、矿物等“行星内容生成”
+
+### 3. 主题和算法选择也有自己的随机消费顺序
+
+`PlanetGen.CreatePlanet()` 里先基于 `info_seed` 连续调用很多次 `NextDouble()` 和一次 `Next()`：
+
+- 轨道
+- 自转
+- 潮汐锁定
+- 主题选择
+- `algoId`
+- `mod_x / mod_y`
+- `style`
+
+源码位置：
+
+- `Assembly-CSharp/PlanetGen.cs:61-78`
+- `Assembly-CSharp/PlanetGen.cs:397-410`
+
+这说明：
+
+原版并不是“全局一个随机数对象到处传”，而是每个阶段各自拿 seed 重新开局，然后按固定顺序消费。
+
+### 4. 矿物生成时，会重新从 `planet.seed` 开始
+
+默认 `GenerateVeins()` 开头就是：
+
+```csharp
+DotNet35Random dotNet35Random = new DotNet35Random(planet.seed);
+dotNet35Random.Next();
+dotNet35Random.Next();
+dotNet35Random.Next();
+dotNet35Random.Next();
+int birthSeed = dotNet35Random.Next();
+DotNet35Random dotNet35Random2 = new DotNet35Random(dotNet35Random.Next());
+```
+
+源码位置：
+
+- `Assembly-CSharp/PlanetAlgorithm.cs:47-53`
+
+这个结构非常重要，说明：
+
+- 每次矿物生成都会从同一个 `planet.seed` 重新开始
+- 而且会先固定跳过几次 `Next()`
+- 后面再拆出 `birthSeed` 和真正用于矿物分布的 `dotNet35Random2`
+
+所以同一颗星球、同一算法、同一输入条件下，矿物结果是 deterministic 的。
+
+### 5. `DotNet35Random` 本身是确定性的
+
+源码里的 `DotNet35Random` 是一个固定实现的伪随机数类，只要种子和调用顺序相同，输出就相同。
+
+源码位置：
+
+- `Assembly-CSharp/DotNet35Random.cs:25-117`
+
+所以真正需要保护的不是“随机对象实例”本身，而是：
+
+- 初始 seed 不变
+- 原版调用顺序不变
+- 原版调用次数不变
+
+## 如何不破坏这个随机机制
+
+如果你的 mod 采用“原版生成后再移动位置”的方案，那么最安全的原则是：
+
+### 原则 1：不要替换原版 `GenerateVeins()` 的随机流程
+
+不要 prefix 里直接跳过原版，再自己重新生成。
+
+因为一旦你接管了：
+
+- 你就必须完整复制不同算法类的随机消费顺序
+- 还必须保证未来任何版本差异都和原版一致
+
+这没有必要。
+
+### 原则 2：让原版先完整生成，再做后处理
+
+也就是：
+
+- 原版照常初始化 `DotNet35Random`
+- 原版照常调用 `Next()/NextDouble()`
+- 原版照常决定矿种、矿量、矿点数、groupIndex
+- mod 在 postfix 里只读取结果并重排位置
+
+这样你没有参与原版随机数消费，自然也就不会破坏原版 seed 机制。
+
+### 原则 3：后处理最好做成确定性映射
+
+你后面“搬到特定纬度范围”的算法，最好也不要使用无约束的新随机数。
+
+更稳的做法是：
+
+- 仅基于现有 `VeinData.pos`
+- 仅基于 `planet.seed`
+- 仅基于 `groupIndex`
+- 仅基于目标纬度参数
+
+做一个纯函数式映射。
+
+例如：
+
+- 先把当前点转成球坐标
+- 保留经度
+- 把纬度压缩或投影到目标区间
+- 再按 `QueryHeight()` 或 `RawSnap()` 贴回地表
+
+这样即使你自己做二次排布，它仍然是 deterministic 的。
+
+### 原则 4：不要改变原版已经算好的矿点数量
+
+对你这个 mod 来说，最安全的是：
+
+- 不增删 `veinPool` 项
+- 不改 `veinCursor`
+- 不改 `amount`
+- 不改 `type`
+
+只搬位置。
+
+这样“同一 seed 生成多少矿”这个原版结果被完整保留。
+
+### 原则 5：油矿要单独小心
+
+油矿在原版里有额外特殊处理：
+
+- 单点矿组
+- 位置经过 `planet.aux.RawSnap(...)`
+- 显示和产量语义和普通矿不完全一样
+
+所以如果你的纬度搬运包含油矿，最好在新位置重新做一次适合油矿的贴点处理，而不是完全沿用普通矿方式。
+
+## 现在这个 mod 的更准确设计目标
+
+基于你现在的要求，这个 mod 最准确的描述应该是：
+
+1. 保留原版种子驱动下生成出的矿种、矿量、矿点数和矿组数。
+2. 不接管原版随机生成逻辑，不修改原版随机数消费顺序。
+3. 在 `GenerateVeins()` 结束后，对 `planet.data.veinPool` 做一次确定性的纬度重排。
+4. 把矿点移动到指定纬度范围，同时重新汇总矿组。
+
+这比“重写矿物生成”要小得多，也更稳。
 
 ## 最有价值的源码入口总结
 
@@ -497,6 +705,4 @@
 
 ## 一句话版结论
 
-矿物位置的真正源头是 `PlanetAlgorithm.GenerateVeins()` 写入 `PlanetRawData.veinPool` 的那一刻。
-
-“更好的矿物位置”这个 mod，最佳切入点不是矿机，不是 UI，也不是工厂加载后的显示，而是行星原始矿脉生成或其后立即重排的阶段。
+矿物位置的真正源头仍然是 `PlanetAlgorithm.GenerateVeins()`，但你这个 mod 最适合做的不是重写它，而是在它执行完之后，保持原版 seed 结果不变，只把已生成矿点确定性地搬到目标纬度范围。
