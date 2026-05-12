@@ -1,6 +1,6 @@
 # 更好的矿物位置
 
-英文目录名：`better-mineral-placement`
+英文目录名：`VeinPlacement`
 
 这份文档基于 `Assembly-CSharp` 反编译源码，目标是回答一件事：
 
