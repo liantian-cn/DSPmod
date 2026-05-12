@@ -12,7 +12,7 @@ using System.Collections;
 
 namespace VeinPlacement
 {
-    public class Class1
+    public class VeinPlacement
     {
     }
 }
