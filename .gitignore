@@ -61,3 +61,4 @@ crashlytics-build.properties
 *\bin
 /DSPmod/obj/Debug
 /DSPmod/obj/Debug
+/Assembly-CSharp
