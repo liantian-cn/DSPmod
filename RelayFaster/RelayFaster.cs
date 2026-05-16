@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using BepInEx;
 using BepInEx.Logging;
@@ -76,22 +77,66 @@ namespace RelayFaster
 
             private static bool ReplaceRandomProbabilityWithMarkerGate(IList<CodeInstruction> codes)
             {
-                object randomValueGetter = AccessTools.PropertyGetter(typeof(Random), "value");
+                int gateIndex = FindDispatchProbabilityGate(codes);
+                if (gateIndex < 0)
+                {
+                    return false;
+                }
+
+                codes[gateIndex].opcode = OpCodes.Ldc_I4_0;
+                codes[gateIndex].operand = null;
+                codes[gateIndex + 1].opcode = OpCodes.Nop;
+                codes[gateIndex + 1].operand = null;
+                codes[gateIndex + 2].opcode = OpCodes.Nop;
+                codes[gateIndex + 2].operand = null;
+                return true;
+            }
+
+            private static int FindDispatchProbabilityGate(IList<CodeInstruction> codes)
+            {
+                MethodInfo randomValueGetter = AccessTools.PropertyGetter(typeof(Random), "value");
+                FieldInfo relayNeutralizedCounterField = AccessTools.Field(
+                    typeof(EnemyDFHiveSystem),
+                    nameof(EnemyDFHiveSystem.relayNeutralizedCounter));
+
                 for (int i = 0; i < codes.Count - 2; i++)
                 {
-                    if (codes[i].opcode == OpCodes.Call &&
-                        Equals(codes[i].operand, randomValueGetter) &&
-                        codes[i + 2].opcode == OpCodes.Clt)
+                    if (codes[i].opcode != OpCodes.Call ||
+                        !Equals(codes[i].operand, randomValueGetter) ||
+                        codes[i + 2].opcode != OpCodes.Clt)
                     {
-                        codes[i].opcode = OpCodes.Ldc_I4_0;
-                        codes[i].operand = null;
-                        codes[i + 1].opcode = OpCodes.Nop;
-                        codes[i + 1].operand = null;
-                        codes[i + 2].opcode = OpCodes.Nop;
-                        codes[i + 2].operand = null;
+                        continue;
+                    }
+
+                    if (HasRecentRelayNeutralizedCounterLoad(codes, i, relayNeutralizedCounterField))
+                    {
+                        return i;
+                    }
+                }
+
+                return -1;
+            }
+
+            private static bool HasRecentRelayNeutralizedCounterLoad(
+                IList<CodeInstruction> codes,
+                int index,
+                FieldInfo relayNeutralizedCounterField)
+            {
+                int start = index - 16;
+                if (start < 0)
+                {
+                    start = 0;
+                }
+
+                for (int i = start; i < index; i++)
+                {
+                    if (codes[i].opcode == OpCodes.Ldfld &&
+                        Equals(codes[i].operand, relayNeutralizedCounterField))
+                    {
                         return true;
                     }
                 }
+
                 return false;
             }
         }

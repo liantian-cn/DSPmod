@@ -38,6 +38,8 @@ Assert-Contains $source 'DispatchIntervalTicks\s*=\s*60' "Dispatch interval must
 Assert-Contains $source 'OriginalMatterStatPeriodTicks\s*=\s*600' "Original 600-tick matter-stat period must remain explicit."
 Assert-Contains $source 'if\s*\(__instance\.ticks\s*%\s*OriginalMatterStatPeriodTicks\s*==\s*0\)' "Extra dispatch must skip original 600-tick calls."
 Assert-Contains $source 'ReplaceRandomProbabilityWithMarkerGate' "Probability transpiler helper is missing."
+Assert-Contains $source 'relayNeutralizedCounterField' "Probability transpiler must anchor on relayNeutralizedCounter so marker target selection is not patched."
+Assert-Contains $source 'FindDispatchProbabilityGate' "Probability transpiler must locate the dispatch probability gate explicitly."
 Assert-NotContains $source 'HarmonyPatch\(typeof\(DFRelayComponent\),\s*"RelaySailLogic"\)' "RelaySailLogic must not be patched."
 Assert-NotContains $source 'relayNeutralizedCounter\s*=\s*0' "Relay neutralized counter must not be reset."
 
