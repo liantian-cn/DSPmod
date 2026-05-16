@@ -58,7 +58,8 @@ sysinfo.txt
 crashlytics-build.properties
 
 *.dll
-*\bin
+**/[Bb]in/
+**/[Oo]bj/
 /DSPmod/obj/Debug
 /DSPmod/obj/Debug
 /Assembly-CSharp
