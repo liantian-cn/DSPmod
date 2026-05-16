@@ -16,8 +16,8 @@ namespace VeinPlacement
         private const float TargetLongitudeDegrees = 90f;
         private const float NormalGroupSpacing = 196f;
         private const float OilGroupSpacing = 100f;
-        private const float InnerVeinMinDistanceSqr = 0.85f;
-        private const float InnerVeinMaxRadiusSqr = 20f;
+        private const float InnerVeinMinDistanceSqr = 0.6375f;
+        private const float InnerVeinMaxRadiusSqr = 15f;
         private const int GroupPlacementAttempts = 4096;
         private const int GroupPlacementRelaxPasses = 32;
         private const int LocalShapePasses = 20;
