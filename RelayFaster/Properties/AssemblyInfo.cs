@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("VeinPlacement")]
+[assembly: AssemblyTitle("RelayFaster")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("VeinPlacement")]
+[assembly: AssemblyProduct("RelayFaster")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // 如果此项目向 COM 公开，则下列 GUID 用于类型库的 ID
-[assembly: Guid("aece1286-cb47-4537-9fcc-f0019fc2b5fd")]
+[assembly: Guid("4ce42280-e008-4beb-8c5d-c7a6009040b8")]
 
 // 程序集的版本信息由下列四个值组成: 
 //

@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{AECE1286-CB47-4537-9FCC-F0019FC2B5FD}</ProjectGuid>
+    <ProjectGuid>{4CE42280-E008-4BEB-8C5D-C7A6009040B8}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>RelayFaster</RootNamespace>
