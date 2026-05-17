@@ -6,13 +6,13 @@ using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
-namespace RelayFaster
+namespace SmartRelayDispatch
 {
-    [BepInPlugin("me.liantian.plugin.RelayFaster", "RelayFaster", "0.0.1")]
-    public class RelayFaster : BaseUnityPlugin
+    [BepInPlugin("me.liantian.plugin.SmartRelayDispatch", "SmartRelayDispatch", "0.0.1")]
+    public class SmartRelayDispatch : BaseUnityPlugin
     {
-        private const string PluginGuid = "me.liantian.plugin.RelayFaster";
-        private const string PluginName = "RelayFaster";
+        private const string PluginGuid = "me.liantian.plugin.SmartRelayDispatch";
+        private const string PluginName = "SmartRelayDispatch";
         private const string PluginVersion = "0.0.1";
 
         private const int DispatchIntervalTicks = 60;
@@ -26,8 +26,8 @@ namespace RelayFaster
         {
             Log = Logger;
             harmony = new Harmony(PluginGuid);
-            harmony.PatchAll(typeof(RelayFaster).Assembly);
-            Log.LogInfo("RelayFaster 0.0.1 initialized");
+            harmony.PatchAll(typeof(SmartRelayDispatch).Assembly);
+            Log.LogInfo("SmartRelayDispatch 0.0.1 initialized");
         }
 
         public void OnDestroy()

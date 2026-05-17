@@ -1,6 +1,6 @@
-# RelayFaster
+# SmartRelayDispatch
 
-RelayFaster 是一个 Dyson Sphere Program 的 BepInEx / Harmony mod，用于调整暗雾 Hive 派出 Relay（中继站）的判定节奏。
+SmartRelayDispatch 是一个 Dyson Sphere Program 的 BepInEx / Harmony mod，用于限制暗雾 Hive 派出 Relay（中继站），使其仅在全息信标选中目标时派出。
 
 ## 逻辑说明
 
@@ -32,7 +32,7 @@ RelayFaster 是一个 Dyson Sphere Program 的 BepInEx / Harmony mod，用于调
 
 ## 部署
 
-构建后将 `RelayFaster.dll` 放入游戏的 BepInEx 插件目录：
+构建后将 `SmartRelayDispatch.dll` 放入游戏的 BepInEx 插件目录：
 
 ```text
 Dyson Sphere Program/BepInEx/plugins/

@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$sourcePath = Join-Path $root "RelayFaster.cs"
+$sourcePath = Join-Path $root "SmartRelayDispatch.cs"
 $readmePath = Join-Path $root "README.md"
 
 $source = Get-Content -Raw -Encoding UTF8 $sourcePath
@@ -31,7 +31,7 @@ function Assert-NotContains {
     }
 }
 
-Assert-Contains $source 'BepInPlugin\("me\.liantian\.plugin\.RelayFaster",\s*"RelayFaster",\s*"0\.0\.1"\)' "RelayFaster plugin metadata is missing."
+Assert-Contains $source 'BepInPlugin\("me\.liantian\.plugin\.SmartRelayDispatch",\s*"SmartRelayDispatch",\s*"0\.0\.1"\)' "SmartRelayDispatch plugin metadata is missing."
 Assert-Contains $source 'HarmonyPatch\(typeof\(EnemyDFHiveSystem\),\s*"KeyTickLogic"\)' "KeyTickLogic patch is missing."
 Assert-Contains $source 'HarmonyPatch\(typeof\(EnemyDFHiveSystem\),\s*"DetermineRelayDemand"\)' "DetermineRelayDemand patch is missing."
 Assert-Contains $source 'DispatchIntervalTicks\s*=\s*60' "Dispatch interval must be 60 Hive ticks."
@@ -49,4 +49,4 @@ Assert-Contains $readme '0%' "README must document the no-marker 0% probability.
 Assert-Contains $readme '100%' "README must document the marker-target 100% probability."
 Assert-Contains $readme 'GUI|config' "README must document that the mod has no GUI/config."
 
-Write-Host "RelayFaster static checks passed."
+Write-Host "SmartRelayDispatch static checks passed."
