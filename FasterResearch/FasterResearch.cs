@@ -1,4 +1,3 @@
-using System;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -13,8 +12,6 @@ namespace FasterResearch
         private const string PluginVersion = "0.0.1";
 
         private const int Multiplier = 24;
-
-        private static int lastDividedTechId = -1;
 
         internal static ManualLogSource Log;
 
@@ -34,26 +31,46 @@ namespace FasterResearch
             harmony = null;
         }
 
-        [HarmonyPatch(typeof(FactorySystem), "GameTickLabResearchMode")]
-        private static class FactorySystemGameTickLabResearchModePatch
+        [HarmonyPatch(typeof(LabComponent), "InternalUpdateResearch")]
+        private static class LabComponentInternalUpdateResearchPatch
         {
-            private static void Postfix(FactorySystem __instance)
+            private static void Prefix(ref float research_speed)
             {
-                int techId = __instance.researchTechId;
-                if (techId <= 0 || techId == lastDividedTechId)
+                ApplyCurrentTechMultiplier();
+                research_speed *= Multiplier;
+            }
+        }
+
+        private static void ApplyCurrentTechMultiplier()
+        {
+            int currentTech = GameMain.history.currentTech;
+            if (currentTech <= 0)
+            {
+                return;
+            }
+
+            TechProto techProto = LDB.techs.Select(currentTech);
+            if (techProto == null || !techProto.IsLabTech)
+            {
+                return;
+            }
+
+            int[] points = LabComponent.matrixPoints;
+            int baseId = LabComponent.matrixIds[0];
+            int len = techProto.Items.Length < techProto.ItemPoints.Length ? techProto.Items.Length : techProto.ItemPoints.Length;
+
+            for (int i = 0; i < len; i++)
+            {
+                int idx = techProto.Items[i] - baseId;
+                if (idx < 0 || idx >= points.Length)
                 {
-                    return;
+                    continue;
                 }
 
-                lastDividedTechId = techId;
-
-                int[] points = LabComponent.matrixPoints;
-                for (int i = 0; i < points.Length; i++)
+                int original = techProto.ItemPoints[i];
+                if (original > 0 && points[idx] == original)
                 {
-                    if (points[i] > 0)
-                    {
-                        points[i] = (points[i] + Multiplier - 1) / Multiplier;
-                    }
+                    points[idx] = (original + Multiplier - 1) / Multiplier;
                 }
             }
         }
