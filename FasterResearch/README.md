@@ -10,7 +10,7 @@ FasterResearch 是一个 Dyson Sphere Program 的 BepInEx / Harmony mod，通过
 
 - 将原版返回的总 hash 需求除以倍率常量，向上取整；
 - 新游戏和读档后同步未解锁科技的 `TechState.hashNeeded`；
-- 保留已有 `hashUploaded`，如果已有进度超过新的需求，游戏原逻辑会自然解锁或进入后续研究。
+- 保留已有 `hashUploaded`，但如果已有进度超过新的需求，会压到 `hashNeeded - 1`，避免读档时出现超界状态。
 
 因此总研究需求变为原来的 1/N。在同样 hash 上传速度下，完成时间约为原来的 1/N。
 

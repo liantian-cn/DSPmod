@@ -12,7 +12,7 @@ namespace FasterResearch
         private const string PluginName = "FasterResearch";
         private const string PluginVersion = "0.0.1";
 
-        private const int Multiplier = 24;
+        private const int Multiplier = 36;
 
         internal static ManualLogSource Log;
 
@@ -79,22 +79,26 @@ namespace FasterResearch
                 return;
             }
 
-            foreach (KeyValuePair<int, TechState> entry in history.techStates)
+            foreach (int techId in new List<int>(history.techStates.Keys))
             {
-                TechState state = entry.Value;
+                TechState state = history.techStates[techId];
                 if (state.unlocked)
                 {
                     continue;
                 }
 
-                TechProto techProto = LDB.techs.Select(entry.Key);
+                TechProto techProto = LDB.techs.Select(techId);
                 if (techProto == null)
                 {
                     continue;
                 }
 
                 state.hashNeeded = techProto.GetHashNeeded(state.curLevel);
-                history.techStates[entry.Key] = state;
+                if (state.hashUploaded >= state.hashNeeded)
+                {
+                    state.hashUploaded = state.hashNeeded - 1L;
+                }
+                history.techStates[techId] = state;
             }
         }
     }
