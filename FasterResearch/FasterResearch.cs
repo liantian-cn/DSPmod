@@ -1,6 +1,7 @@
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using System.Collections.Generic;
 
 namespace FasterResearch
 {
@@ -31,47 +32,69 @@ namespace FasterResearch
             harmony = null;
         }
 
-        [HarmonyPatch(typeof(LabComponent), "InternalUpdateResearch")]
-        private static class LabComponentInternalUpdateResearchPatch
+        [HarmonyPatch(typeof(TechProto), "GetHashNeeded")]
+        private static class TechProtoGetHashNeededPatch
         {
-            private static void Prefix(ref float research_speed)
+            private static void Postfix(ref long __result)
             {
-                ApplyCurrentTechMultiplier();
-                research_speed *= Multiplier;
+                __result = DivideRoundUp(__result, Multiplier);
             }
         }
 
-        private static void ApplyCurrentTechMultiplier()
+        [HarmonyPatch(typeof(GameHistoryData), "SetForNewGame")]
+        private static class GameHistoryDataSetForNewGamePatch
         {
-            int currentTech = GameMain.history.currentTech;
-            if (currentTech <= 0)
+            private static void Postfix(GameHistoryData __instance)
+            {
+                SyncCurrentTechHashNeeded(__instance);
+            }
+        }
+
+        [HarmonyPatch(typeof(GameHistoryData), "Import")]
+        private static class GameHistoryDataImportPatch
+        {
+            private static void Postfix(GameHistoryData __instance, bool isPreview)
+            {
+                if (!isPreview)
+                {
+                    SyncCurrentTechHashNeeded(__instance);
+                }
+            }
+        }
+
+        private static long DivideRoundUp(long value, int divisor)
+        {
+            if (value <= 0)
+            {
+                return value;
+            }
+
+            return (value + divisor - 1L) / divisor;
+        }
+
+        private static void SyncCurrentTechHashNeeded(GameHistoryData history)
+        {
+            if (history?.techStates == null)
             {
                 return;
             }
 
-            TechProto techProto = LDB.techs.Select(currentTech);
-            if (techProto == null || !techProto.IsLabTech)
+            foreach (KeyValuePair<int, TechState> entry in history.techStates)
             {
-                return;
-            }
-
-            int[] points = LabComponent.matrixPoints;
-            int baseId = LabComponent.matrixIds[0];
-            int len = techProto.Items.Length < techProto.ItemPoints.Length ? techProto.Items.Length : techProto.ItemPoints.Length;
-
-            for (int i = 0; i < len; i++)
-            {
-                int idx = techProto.Items[i] - baseId;
-                if (idx < 0 || idx >= points.Length)
+                TechState state = entry.Value;
+                if (state.unlocked)
                 {
                     continue;
                 }
 
-                int original = techProto.ItemPoints[i];
-                if (original > 0 && points[idx] == original)
+                TechProto techProto = LDB.techs.Select(entry.Key);
+                if (techProto == null)
                 {
-                    points[idx] = (original + Multiplier - 1) / Multiplier;
+                    continue;
                 }
+
+                state.hashNeeded = techProto.GetHashNeeded(state.curLevel);
+                history.techStates[entry.Key] = state;
             }
         }
     }
