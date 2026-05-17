@@ -189,7 +189,7 @@ namespace VeinPlacement
                 Vector3 center;
                 if (!TryPlaceOneGroupCenter(planet, groups[i], centerLongitude, rng, placed, 0f, out center))
                 {
-                    center = FindAnyValidCenter(planet, groups[i], centerLongitude, rng);
+                    center = FindAnyCenter(centerLongitude, rng);
                 }
 
                 placed.Add(center);
@@ -207,11 +207,6 @@ namespace VeinPlacement
             for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
             {
                 Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
-                float height = planet.data.QueryHeight(candidate);
-                if (height < planet.radius || (group.Type == EVeinType.Oil && height < planet.radius + 0.5f))
-                {
-                    continue;
-                }
 
                 bool tooClose = false;
                 for (int i = 0; i < placed.Count; i++)
@@ -234,19 +229,9 @@ namespace VeinPlacement
             return false;
         }
 
-        private static Vector3 FindAnyValidCenter(PlanetData planet, VeinGroupWork group, float centerLongitude, DotNet35Random rng)
+        private static Vector3 FindAnyCenter(float centerLongitude, DotNet35Random rng)
         {
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-            {
-                Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
-                float height = planet.data.QueryHeight(candidate);
-                if (height >= planet.radius && (group.Type != EVeinType.Oil || height >= planet.radius + 0.5f))
-                {
-                    return candidate.normalized;
-                }
-            }
-
-            return DirectionFromLatLon(0f, centerLongitude);
+            return RandomDirectionInTargetWindow(centerLongitude, rng).normalized;
         }
 
         private static Vector3 RandomDirectionInTargetWindow(float centerLongitude, DotNet35Random rng)
