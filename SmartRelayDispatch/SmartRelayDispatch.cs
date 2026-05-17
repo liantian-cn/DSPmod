@@ -140,5 +140,32 @@ namespace SmartRelayDispatch
                 return false;
             }
         }
+
+        [HarmonyPatch(typeof(DFRelayComponent), "CheckLandCondition")]
+        private static class DFRelayComponentCheckLandConditionPatch
+        {
+            private static void Postfix(DFRelayComponent __instance, ref bool __result)
+            {
+                if (__instance != null && __instance.dstMarkerId > 0)
+                {
+                    __result = true;
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(EnemyDFHiveSystem), nameof(EnemyDFHiveSystem.CheckRelayCoLandingCondition), new[] { typeof(int), typeof(DFRelayComponent), typeof(bool) })]
+        private static class EnemyDFHiveSystemCheckRelayCoLandingConditionPatch
+        {
+            private static bool Prefix(DFRelayComponent sailingRelay, ref bool __result)
+            {
+                if (sailingRelay != null && sailingRelay.dstMarkerId > 0)
+                {
+                    __result = false;
+                    return false;
+                }
+
+                return true;
+            }
+        }
     }
 }

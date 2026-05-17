@@ -40,13 +40,17 @@ Assert-Contains $source 'if\s*\(__instance\.ticks\s*%\s*OriginalMatterStatPeriod
 Assert-Contains $source 'ReplaceRandomProbabilityWithMarkerGate' "Probability transpiler helper is missing."
 Assert-Contains $source 'relayNeutralizedCounterField' "Probability transpiler must anchor on relayNeutralizedCounter so marker target selection is not patched."
 Assert-Contains $source 'FindDispatchProbabilityGate' "Probability transpiler must locate the dispatch probability gate explicitly."
-Assert-NotContains $source 'HarmonyPatch\(typeof\(DFRelayComponent\),\s*"RelaySailLogic"\)' "RelaySailLogic must not be patched."
+Assert-Contains $source 'HarmonyPatch\(typeof\(DFRelayComponent\),\s*"CheckLandCondition"\)' "Marker relay landing condition patch is missing."
+Assert-Contains $source 'dstMarkerId\s*>\s*0[\s\S]*__result\s*=\s*true' "Marker-targeted relays must ignore later landing condition failures."
+Assert-Contains $source 'HarmonyPatch\(typeof\(EnemyDFHiveSystem\),\s*nameof\(EnemyDFHiveSystem\.CheckRelayCoLandingCondition\)' "Relay co-landing condition patch is missing."
+Assert-Contains $source 'sailingRelay\s*!=\s*null\s*&&\s*sailingRelay\.dstMarkerId\s*>\s*0[\s\S]*__result\s*=\s*false' "Marker-targeted relays must ignore later co-landing condition failures."
 Assert-NotContains $source 'relayNeutralizedCounter\s*=\s*0' "Relay neutralized counter must not be reset."
 
 Assert-Contains $readme '10' "README must document the original 10-minute cadence."
 Assert-Contains $readme '1' "README must document the new 1-minute cadence."
 Assert-Contains $readme '0%' "README must document the no-marker 0% probability."
 Assert-Contains $readme '100%' "README must document the marker-target 100% probability."
+Assert-Contains $readme 'landing checks' "README must document marker relay landing-check behavior."
 Assert-Contains $readme 'GUI|config' "README must document that the mod has no GUI/config."
 
 Write-Host "SmartRelayDispatch static checks passed."
