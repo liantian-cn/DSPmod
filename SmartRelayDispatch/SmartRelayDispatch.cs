@@ -15,9 +15,6 @@ namespace SmartRelayDispatch
         private const string PluginName = "SmartRelayDispatch";
         private const string PluginVersion = "0.0.1";
 
-        private const int DispatchIntervalTicks = 60;
-        private const int OriginalMatterStatPeriodTicks = 600;
-
         internal static ManualLogSource Log;
 
         private Harmony harmony;
@@ -34,32 +31,6 @@ namespace SmartRelayDispatch
         {
             harmony?.UnpatchSelf();
             harmony = null;
-        }
-
-        [HarmonyPatch(typeof(EnemyDFHiveSystem), "KeyTickLogic")]
-        private static class EnemyDFHiveSystemKeyTickLogicPatch
-        {
-            private static void Postfix(EnemyDFHiveSystem __instance, ref bool is_alive)
-            {
-                if (__instance == null || !is_alive || __instance.ticks <= 0)
-                {
-                    return;
-                }
-                if (!__instance.matterStatComplete)
-                {
-                    return;
-                }
-                if (__instance.ticks % DispatchIntervalTicks != 0)
-                {
-                    return;
-                }
-                if (__instance.ticks % OriginalMatterStatPeriodTicks == 0)
-                {
-                    return;
-                }
-
-                __instance.DetermineRelayDemand();
-            }
         }
 
         [HarmonyPatch(typeof(EnemyDFHiveSystem), "DetermineRelayDemand")]
@@ -138,33 +109,6 @@ namespace SmartRelayDispatch
                 }
 
                 return false;
-            }
-        }
-
-        [HarmonyPatch(typeof(DFRelayComponent), "CheckLandCondition")]
-        private static class DFRelayComponentCheckLandConditionPatch
-        {
-            private static void Postfix(DFRelayComponent __instance, ref bool __result)
-            {
-                if (__instance != null && __instance.dstMarkerId > 0)
-                {
-                    __result = true;
-                }
-            }
-        }
-
-        [HarmonyPatch(typeof(EnemyDFHiveSystem), nameof(EnemyDFHiveSystem.CheckRelayCoLandingCondition), new[] { typeof(int), typeof(DFRelayComponent), typeof(bool) })]
-        private static class EnemyDFHiveSystemCheckRelayCoLandingConditionPatch
-        {
-            private static bool Prefix(DFRelayComponent sailingRelay, ref bool __result)
-            {
-                if (sailingRelay != null && sailingRelay.dstMarkerId > 0)
-                {
-                    __result = false;
-                    return false;
-                }
-
-                return true;
             }
         }
     }
