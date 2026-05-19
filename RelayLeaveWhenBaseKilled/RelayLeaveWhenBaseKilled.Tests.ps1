@@ -41,6 +41,7 @@ Assert-Contains $source 'relay\.baseId\s*==\s*baseId' "Patch must only affect th
 Assert-Contains $source 'relay\.stage\s*==\s*2' "Patch must only affect landed relays."
 Assert-Contains $source 'relay\.baseState\s*==\s*2' "Patch must only affect relays maintaining a ground base."
 Assert-Contains $source 'CheckBaseCanRemoved\(baseId\)\s*!=\s*0' "Geothermal build must only run when vanilla reports the base pit can be removed."
+Assert-Contains $source 'factory\.planet\?\.aux\s*==\s*null' "Geothermal build must skip when planet auxiliary data is unavailable."
 Assert-Contains $source 'HasGeothermalOnBaseRuin' "Patch must avoid duplicate geothermal builds on the same ruin."
 Assert-Contains $source 'prefabDesc\.geothermal' "Patch must locate the vanilla geothermal generator item."
 Assert-Contains $source 'AddPrebuildDataWithComponents\(prebuild\)' "Patch must reuse the vanilla prebuild creation path for geothermal generators."

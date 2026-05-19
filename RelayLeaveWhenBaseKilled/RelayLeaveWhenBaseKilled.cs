@@ -77,12 +77,18 @@ namespace RelayLeaveWhenBaseKilled
                     return;
                 }
 
+                PlanetFactory factory = groundSystem.factory;
+                if (factory.planet?.aux == null)
+                {
+                    Log?.LogWarning($"Skip geothermal build for base {baseId}: planet auxiliary data is unavailable.");
+                    return;
+                }
+
                 if (groundSystem.CheckBaseCanRemoved(baseId) != 0)
                 {
                     return;
                 }
 
-                PlanetFactory factory = groundSystem.factory;
                 int baseRuinId = baseComponent.ruinId;
                 if (HasGeothermalOnBaseRuin(factory, baseRuinId) || factory.ruinPool == null || baseRuinId >= factory.ruinPool.Length)
                 {
@@ -114,6 +120,11 @@ namespace RelayLeaveWhenBaseKilled
 
             private static int BuildGeothermalEntity(PlanetFactory factory, ItemProto geothermalItem, int baseRuinId, Vector3 ruinPos)
             {
+                if (factory?.planet?.aux == null || geothermalItem == null)
+                {
+                    return 0;
+                }
+
                 Vector3 buildPos = factory.planet.aux.Snap(ruinPos, onTerrain: true);
                 Quaternion buildRot = Maths.SphericalRotation(buildPos, 0f);
 
