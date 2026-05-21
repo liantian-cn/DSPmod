@@ -64,3 +64,4 @@ crashlytics-build.properties
 /DSPmod/obj/Debug
 /Assembly-CSharp
 *.cache
+SurfaceRuins/output.csv

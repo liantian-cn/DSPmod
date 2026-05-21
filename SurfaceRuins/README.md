@@ -2,116 +2,81 @@
 
 中文名：`星表废墟`
 
-Surface Ruins 是一个 Dyson Sphere Program 的 BepInEx / UXAssist mod，用于在当前星球表面批量创建黑雾地面基地基坑废墟。
+`Surface Ruins` 是一个 Dyson Sphere Program 的 BepInEx / UXAssist 插件，用来在当前星球上快速生成黑雾基地坑废墟，或者直接在空闲废墟上补建地热发电站。
 
-## 行为说明
+## 功能
 
-本 mod 在 UXAssist 配置窗口里添加一个菜单：
+插件会在 UXAssist 配置窗口里添加一个 `星表废墟` 分组，目前包含两个按钮：
 
-- 菜单名：`星表废墟`
-- 按钮名：`在当前星球构造废墟`
+- `在当前星球构造废墟`
+- `在空闲废墟上建造地热发电站`
 
-点击按钮后，mod 会在当前本地星球上尝试创建 153 个 30 级黑雾基坑废墟。
+第一个按钮会在当前本地星球上批量创建一组 30 级黑雾基地坑废墟。
+第二个按钮会扫描当前星球上的 406 号基地坑废墟，只对“没有已建地热、没有地热预建、也没有真实黑雾基地绑定”的空闲废墟创建地热发电站。
 
-这些点来自以下命令的输出，并已经内置在 `SurfaceRuins.cs` 中：
+## 原理
 
-```powershell
-python estimate_sphere_building_capacity.py --emit-points 52.5 --starts 2 --iterations 100 --radius 200.2
-```
+### 废墟生成
 
-生成点使用 52.5 的最小间距，半径使用 200.2。运行时会根据当前星球的 `realRadius + 0.2` 重新缩放，并用 `planet.aux.Snap(pos, onTerrain: true)` 吸附到星球表面。
-
-## 废墟类型
-
-每个新建废墟使用：
-
-```csharp
-modelIndex = 406;
-lifeTime = -31;
-```
-
-含义：
-
-- `modelIndex = 406`：黑雾地面基地基坑废墟。
-- `lifeTime = -31`：30 级基坑废墟，原版等级公式是 `level = -lifeTime - 1`。
-- 30 级基坑对应地热强度为 `3.0 + 30 * 0.1 = 6.0`。
-
-创建入口只使用：
+废墟不是通过真实黑雾基地系统生成的，而是直接调用：
 
 ```csharp
 factory.AddRuinDataWithComponent(ruinData);
 ```
 
-## 去重逻辑
-
-为了避免重复点击按钮后在同一位置堆叠废墟，mod 在每个目标点创建前会扫描当前星球已有 `RuinData`。
-
-如果目标点 50 本地距离范围内已经存在任意 active 废墟，则跳过该目标点。
-
-这意味着：
-
-- 第一次点击通常会创建全部目标点。
-- 后续重复点击只会补齐缺失点。
-- 如果星球上已有其他废墟靠近目标点，也会跳过，避免重叠。
-
-## 不会做的事
-
-本 mod 创建的是“假黑雾基坑废墟”，不是一个真实黑雾地面基地。
-
-它不会创建或绑定：
-
-- `DFGBaseComponent`
-- `EnemyData`
-- `DFRelayComponent`
-- relay / hive / base 绑定关系
-
-它也不会调用：
-
-- `CreateEnemyPlanetBase`
-- `NotifyBaseKilled`
-
-因此这些废墟不会进入黑雾基地生命周期，也不会主动吸引敌人过来。
-
-## UI / config
-
-本 mod 依赖 UXAssist：
+生成时使用这些关键字段：
 
 ```csharp
-[BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
+ruinData.modelIndex = 406;
+ruinData.lifeTime = -31;
 ```
 
-当前没有配置项。启用 mod 后，通过 UXAssist 菜单中的按钮手动执行生成。
+- `modelIndex = 406` 表示黑雾地面基地坑废墟
+- `lifeTime = -31` 对应 30 级基地坑
 
-## 相关文件
+生成位置会先按当前星球半径缩放，再通过 `planet.aux.Snap(pos, onTerrain: true)` 吸附到地表。
 
-- `SurfaceRuins.cs`：插件主体、UXAssist UI、废墟创建逻辑、内置坐标。
-- `CreateLevel30BaseRuin.md`：创建 30 级基坑废墟的研究笔记。
-- `estimate_sphere_building_capacity.py`：通用球面建筑点位估算脚本。
-- `sphere_poisson_disk.py`：通用球面泊松圆盘采样脚本，适合快速生成随机点位。
-- `SurfaceRuins.Tests.ps1`：静态检查脚本。
+### 地热建造
 
-## 构建和验证
+地热按钮复用了游戏原版的预建造和实体创建流程：
 
-从仓库根目录运行静态检查：
+1. 扫描 `LDB.items`，动态找到可建造的地热发电站物品
+2. 扫描 `ruinPool`，只挑选 `modelIndex == 406` 的废墟
+3. 排除已经有地热发电站、地热预建，或者仍绑定真实黑雾基地的废墟
+4. 构造 `PrebuildData`，并把目标废墟 id 写入：
+
+```csharp
+prebuild.InitParametersArray(1);
+prebuild.parameters[0] = baseRuinId;
+```
+
+5. 通过 `AddPrebuildDataWithComponents` 和 `AddEntityDataWithComponents` 完成实体创建
+6. 清理临时 prebuild，并触发原版建造回调
+
+这个流程的关键点是：**不检查背包、不检查地基、不检查沙土，也不走真实基地移除路径**。它只负责把地热站直接建在“空闲废墟”上。
+
+## 空闲废墟定义
+
+这里的“空闲废墟”指的是：
+
+- 当前星球上的 406 号基地坑废墟
+- 没有已建成的地热发电站
+- 没有正在等待完成的地热预建
+- 没有仍然绑定的真实黑雾基地
+
+## 构建与验证
+
+从仓库根目录运行：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\SurfaceRuins\SurfaceRuins.Tests.ps1
-```
-
-从仓库根目录构建：
-
-```powershell
 dotnet build SurfaceRuins\SurfaceRuins.slnx
 ```
 
-构建后核心产物是：
+输出 DLL 位于：
 
 ```text
-SurfaceRuins/bin/Debug/SurfaceRuins.dll
+SurfaceRuins\bin\Debug\SurfaceRuins.dll
 ```
 
-部署到游戏时，将 DLL 放入 BepInEx 插件目录：
-
-```text
-Dyson Sphere Program/BepInEx/plugins/
-```
+部署到游戏时，把 DLL 放到 `Dyson Sphere Program/BepInEx/plugins/`。
