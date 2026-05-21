@@ -1,15 +1,23 @@
 import math
 import unittest
 
-import estimate_sphere_ruin_capacity as estimator
+import estimate_sphere_building_capacity as estimator
 
 
-class SphereRuinCapacityTests(unittest.TestCase):
+class SphereBuildingCapacityTests(unittest.TestCase):
     def test_default_distances_match_requested_values(self):
         self.assertEqual(estimator.DEFAULT_DISTANCES, (52.5, 53.0, 53.5, 54.5, 55.0))
 
     def test_area_upper_bound_for_distance_55_radius_200(self):
         self.assertEqual(estimator.area_upper_bound(200.0, 55.0), 210)
+
+    def test_triangular_lattice_estimate_uses_two_triangles_per_point(self):
+        self.assertEqual(estimator.equilateral_triangle_area(55.0), 1309.863423)
+        self.assertEqual(estimator.triangular_lattice_center_count(200.0, 55.0), 192)
+
+    def test_search_counts_start_near_triangular_lattice_estimate(self):
+        counts = list(estimator.search_counts(center=10, lower_bound=7, upper_bound=13))
+        self.assertEqual(counts, [10, 9, 8, 7, 11, 12, 13])
 
     def test_generated_points_respect_requested_chord_distance(self):
         result = estimator.estimate_for_distance(

@@ -16,7 +16,7 @@ Surface Ruins 是一个 Dyson Sphere Program 的 BepInEx / UXAssist mod，用于
 这些点来自以下命令的输出，并已经内置在 `SurfaceRuins.cs` 中：
 
 ```powershell
-python estimate_sphere_ruin_capacity.py --emit-points 52.5 --starts 2 --iterations 100 --radius 200.2
+python estimate_sphere_building_capacity.py --emit-points 52.5 --starts 2 --iterations 100 --radius 200.2
 ```
 
 生成点使用 52.5 的最小间距，半径使用 200.2。运行时会根据当前星球的 `realRadius + 0.2` 重新缩放，并用 `planet.aux.Snap(pos, onTerrain: true)` 吸附到星球表面。
@@ -86,7 +86,8 @@ factory.AddRuinDataWithComponent(ruinData);
 
 - `SurfaceRuins.cs`：插件主体、UXAssist UI、废墟创建逻辑、内置坐标。
 - `CreateLevel30BaseRuin.md`：创建 30 级基坑废墟的研究笔记。
-- `estimate_sphere_ruin_capacity.py`：球面点位估算脚本。
+- `estimate_sphere_building_capacity.py`：通用球面建筑点位估算脚本。
+- `sphere_poisson_disk.py`：通用球面泊松圆盘采样脚本，适合快速生成随机点位。
 - `SurfaceRuins.Tests.ps1`：静态检查脚本。
 
 ## 构建和验证

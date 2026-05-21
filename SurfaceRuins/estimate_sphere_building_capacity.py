@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Estimate how many base-pit ruins fit on a spherical planet surface.
+"""Estimate how many spaced points fit on a spherical planet surface.
 
 The game-side spacing rule uses local 3D chord distance between positions, not
 surface arc length. This script therefore keeps all generated points on a
@@ -7,7 +7,7 @@ sphere of radius 200 by default and checks ordinary Euclidean distance.
 
 The result is an estimate: finding the exact maximum packing on a sphere is a
 hard optimization problem. The script reports both a constructive count that it
-found and a simple area upper bound.
+found, a simple area upper bound, and a triangular-lattice area estimate.
 """
 
 from __future__ import annotations
@@ -38,6 +38,7 @@ class EstimateResult:
     distance: float
     angular_distance_degrees: float
     area_upper_bound: int
+    triangular_lattice_center: int
     count: int
     actual_min_distance: float
     points: tuple[Point, ...]
@@ -62,6 +63,42 @@ def area_upper_bound(radius: float, chord_distance: float) -> int:
     cap_area = 2.0 * math.pi * radius * radius * (1.0 - math.cos(alpha / 2.0))
     sphere_area = 4.0 * math.pi * radius * radius
     return math.floor(sphere_area / cap_area)
+
+
+def sphere_area(radius: float) -> float:
+    if radius <= 0:
+        raise ValueError("radius must be positive")
+    return 4.0 * math.pi * radius * radius
+
+
+def equilateral_triangle_area(side_length: float) -> float:
+    if side_length <= 0:
+        raise ValueError("side_length must be positive")
+    return round(math.sqrt(3.0) * side_length * side_length / 4.0, 6)
+
+
+def triangular_lattice_center_count(radius: float, chord_distance: float) -> int:
+    """Estimate count from planar triangular packing area per point.
+
+    A triangular lattice has two equilateral triangles around each point on
+    average, so the per-point area is sqrt(3) / 2 * distance^2.
+    """
+
+    per_point_area = equilateral_triangle_area(chord_distance) * 2.0
+    return max(1, round(sphere_area(radius) / per_point_area))
+
+
+def search_counts(center: int, lower_bound: int, upper_bound: int) -> Iterable[int]:
+    if lower_bound <= 0:
+        raise ValueError("lower_bound must be positive")
+    if lower_bound > upper_bound:
+        raise ValueError("lower_bound cannot exceed upper_bound")
+
+    center = min(max(center, lower_bound), upper_bound)
+    for count in range(center, lower_bound - 1, -1):
+        yield count
+    for count in range(center + 1, upper_bound + 1):
+        yield count
 
 
 def fibonacci_points(count: int, radius: float, epsilon: float, phase: float) -> list[Point]:
@@ -211,11 +248,13 @@ def find_constructive_set(
     seed: int,
 ) -> tuple[int, float, tuple[Point, ...]]:
     upper_bound = area_upper_bound(radius, distance)
+    center = triangular_lattice_center_count(radius, distance)
+    lower_bound = max(1, math.floor(center * 0.55))
     best_count = 0
     best_distance = 0.0
     best_points: tuple[Point, ...] = ()
 
-    for count in range(upper_bound, 0, -1):
+    for count in search_counts(center, lower_bound, upper_bound):
         local_best_distance = 0.0
         local_best_points: tuple[Point, ...] = ()
         closest_candidate: list[Point] | None = None
@@ -253,11 +292,6 @@ def find_constructive_set(
             best_distance = local_best_distance
             best_points = local_best_points
 
-        # Once the best failed candidate is well below the target, dropping a few
-        # more points is usually enough. This keeps default runtime predictable.
-        if count < upper_bound * 0.55 and best_count > 0:
-            break
-
     return best_count, best_distance, best_points
 
 
@@ -280,6 +314,7 @@ def estimate_for_distance(
         distance=distance,
         angular_distance_degrees=math.degrees(angle),
         area_upper_bound=area_upper_bound(radius, distance),
+        triangular_lattice_center=triangular_lattice_center_count(radius, distance),
         count=count,
         actual_min_distance=actual_min_distance,
         points=points,
@@ -309,6 +344,7 @@ def print_table(results: Sequence[EstimateResult]) -> None:
             "distance",
             "angle_deg",
             "area_upper",
+            "triangular_center",
             "found_count",
             "actual_min_distance",
         )
@@ -319,6 +355,7 @@ def print_table(results: Sequence[EstimateResult]) -> None:
                 format_distance(result.distance),
                 f"{result.angular_distance_degrees:.4f}",
                 str(result.area_upper_bound),
+                str(result.triangular_lattice_center),
                 str(result.count),
                 f"{result.actual_min_distance:.4f}",
             )
