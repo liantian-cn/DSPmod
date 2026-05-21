@@ -16,9 +16,10 @@ import argparse
 import csv
 import math
 import random
-import sys
 from dataclasses import dataclass
 from typing import Iterable, Sequence
+
+from tqdm import tqdm
 
 
 DEFAULT_RADIUS = 200.0
@@ -246,6 +247,7 @@ def find_constructive_set(
     starts: int,
     iterations: int,
     seed: int,
+    show_progress: bool = False,
 ) -> tuple[int, float, tuple[Point, ...]]:
     upper_bound = area_upper_bound(radius, distance)
     center = triangular_lattice_center_count(radius, distance)
@@ -253,8 +255,16 @@ def find_constructive_set(
     best_count = 0
     best_distance = 0.0
     best_points: tuple[Point, ...] = ()
+    counts = list(search_counts(center, lower_bound, upper_bound))
+    count_iterable = tqdm(
+        counts,
+        desc=f"d={distance:g}",
+        unit="count",
+        dynamic_ncols=True,
+        disable=not show_progress,
+    )
 
-    for count in search_counts(center, lower_bound, upper_bound):
+    for count in count_iterable:
         local_best_distance = 0.0
         local_best_points: tuple[Point, ...] = ()
         closest_candidate: list[Point] | None = None
@@ -262,6 +272,7 @@ def find_constructive_set(
         for candidate in candidate_sets(count, radius, starts, seed):
             before_distance = minimum_distance(candidate)
             if before_distance >= distance:
+                count_iterable.set_postfix_str(f"found={count} min={before_distance:.4f}")
                 return count, before_distance, tuple(candidate)
 
             if before_distance > local_best_distance:
@@ -282,6 +293,7 @@ def find_constructive_set(
             )
             after_distance = minimum_distance(relaxed)
             if after_distance >= distance:
+                count_iterable.set_postfix_str(f"found={count} min={after_distance:.4f}")
                 return count, after_distance, tuple(relaxed)
             if after_distance > local_best_distance:
                 local_best_distance = after_distance
@@ -291,6 +303,7 @@ def find_constructive_set(
             best_count = count
             best_distance = local_best_distance
             best_points = local_best_points
+            count_iterable.set_postfix_str(f"best={best_count} min={best_distance:.4f}")
 
     return best_count, best_distance, best_points
 
@@ -301,6 +314,7 @@ def estimate_for_distance(
     starts: int = 6,
     iterations: int = 250,
     seed: int = 20260521,
+    show_progress: bool = False,
 ) -> EstimateResult:
     count, actual_min_distance, points = find_constructive_set(
         radius=radius,
@@ -308,6 +322,7 @@ def estimate_for_distance(
         starts=starts,
         iterations=iterations,
         seed=seed,
+        show_progress=show_progress,
     )
     angle = chord_to_angle(radius, distance)
     return EstimateResult(
@@ -375,7 +390,7 @@ def write_points_csv(result: EstimateResult, output) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Estimate how many ruins fit on a sphere with chord-distance spacing."
+        description="Estimate how many spaced points fit on a sphere with chord-distance spacing."
     )
     parser.add_argument("--radius", type=float, default=DEFAULT_RADIUS)
     parser.add_argument("--distances", nargs="*", help="Distances, comma-separated or space-separated.")
@@ -386,8 +401,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--emit-points",
         type=float,
         metavar="DISTANCE",
-        help="Print CSV coordinates for one distance instead of the summary table.",
+        help="Write CSV coordinates for one distance instead of printing the summary table.",
     )
+    parser.add_argument("--output", default="output.csv", help="CSV path used with --emit-points.")
+    parser.add_argument("--no-progress", action="store_true", help="Disable tqdm for --emit-points.")
     return parser
 
 
@@ -403,8 +420,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             starts=args.starts,
             iterations=args.iterations,
             seed=args.seed,
+            show_progress=not args.no_progress,
         )
-        write_points_csv(result, sys.stdout)
+        with open(args.output, "w", newline="", encoding="utf-8") as output:
+            write_points_csv(result, output)
         return 0
 
     results = [

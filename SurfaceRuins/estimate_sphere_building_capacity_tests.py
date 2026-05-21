@@ -19,27 +19,15 @@ class SphereBuildingCapacityTests(unittest.TestCase):
         counts = list(estimator.search_counts(center=10, lower_bound=7, upper_bound=13))
         self.assertEqual(counts, [10, 9, 8, 7, 11, 12, 13])
 
-    def test_progress_message_includes_current_count_and_best_result(self):
-        event = estimator.ProgressEvent(
-            distance=10.6,
-            tested_counts=12,
-            count=5150,
-            center=5167,
-            lower_bound=2841,
-            upper_bound=5689,
-            local_best_distance=10.41,
-            best_count=5120,
-            best_distance=10.61,
-            success=False,
-        )
+    def test_emit_points_defaults_to_output_csv(self):
+        args = estimator.build_parser().parse_args(["--emit-points", "10.6"])
+        self.assertEqual(args.output, "output.csv")
 
-        self.assertEqual(
-            estimator.format_progress(event),
-            (
-                "distance=10.6 tested=12 count=5150 range=2841..5689 "
-                "center=5167 local_min=10.4100 best=5120@10.6100"
-            ),
+    def test_emit_points_accepts_custom_output_path(self):
+        args = estimator.build_parser().parse_args(
+            ["--emit-points", "10.6", "--output", "wind.csv"]
         )
+        self.assertEqual(args.output, "wind.csv")
 
     def test_generated_points_respect_requested_chord_distance(self):
         result = estimator.estimate_for_distance(
