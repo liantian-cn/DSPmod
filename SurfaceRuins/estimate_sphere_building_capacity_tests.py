@@ -29,6 +29,22 @@ class SphereBuildingCapacityTests(unittest.TestCase):
         )
         self.assertEqual(args.output, "wind.csv")
 
+    def test_spacing_validation_detects_close_points(self):
+        points = (
+            estimator.Point(0.0, 0.0, 200.0),
+            estimator.Point(0.0, 9.0, 199.797397),
+        )
+
+        self.assertFalse(estimator.is_spacing_valid(points, 10.0))
+        self.assertTrue(estimator.is_spacing_valid(points, 8.0))
+
+    def test_spacing_validation_matches_minimum_distance_result(self):
+        points = estimator.fibonacci_points(count=64, radius=200.0, epsilon=0.5, phase=0.0)
+        min_distance = estimator.minimum_distance(points)
+
+        self.assertTrue(estimator.is_spacing_valid(points, min_distance - 1e-6))
+        self.assertFalse(estimator.is_spacing_valid(points, min_distance + 1e-6))
+
     def test_generated_points_respect_requested_chord_distance(self):
         result = estimator.estimate_for_distance(
             radius=200.0,

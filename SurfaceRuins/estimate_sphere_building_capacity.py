@@ -16,6 +16,7 @@ import argparse
 import csv
 import math
 import random
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Iterable, Sequence
 
@@ -144,6 +145,46 @@ def squared_distance(a: Point, b: Point) -> float:
     return dx * dx + dy * dy + dz * dz
 
 
+class SpatialHash:
+    def __init__(self, min_distance: float) -> None:
+        if min_distance <= 0:
+            raise ValueError("min_distance must be positive")
+        self.min_distance_squared = min_distance * min_distance
+        self.cell_size = min_distance / math.sqrt(3.0)
+        self.neighbor_range = math.ceil(min_distance / self.cell_size)
+        self.cells: dict[tuple[int, int, int], list[Point]] = defaultdict(list)
+
+    def cell_key(self, point: Point) -> tuple[int, int, int]:
+        return (
+            math.floor(point.x / self.cell_size),
+            math.floor(point.y / self.cell_size),
+            math.floor(point.z / self.cell_size),
+        )
+
+    def add(self, point: Point) -> None:
+        self.cells[self.cell_key(point)].append(point)
+
+    def can_place(self, point: Point) -> bool:
+        cx, cy, cz = self.cell_key(point)
+        span = self.neighbor_range
+        for x in range(cx - span, cx + span + 1):
+            for y in range(cy - span, cy + span + 1):
+                for z in range(cz - span, cz + span + 1):
+                    for other in self.cells.get((x, y, z), ()):
+                        if squared_distance(point, other) < self.min_distance_squared:
+                            return False
+        return True
+
+
+def is_spacing_valid(points: Sequence[Point], min_distance: float) -> bool:
+    grid = SpatialHash(min_distance)
+    for point in points:
+        if not grid.can_place(point):
+            return False
+        grid.add(point)
+    return True
+
+
 def minimum_distance(points: Sequence[Point], stop_below: float | None = None) -> float:
     if len(points) < 2:
         return math.inf
@@ -270,10 +311,15 @@ def find_constructive_set(
         closest_candidate: list[Point] | None = None
 
         for candidate in candidate_sets(count, radius, starts, seed):
-            before_distance = minimum_distance(candidate)
-            if before_distance >= distance:
+            if is_spacing_valid(candidate, distance):
+                before_distance = minimum_distance(candidate)
                 count_iterable.set_postfix_str(f"found={count} min={before_distance:.4f}")
                 return count, before_distance, tuple(candidate)
+
+            before_distance = minimum_distance(candidate, stop_below=distance * 0.985)
+            if before_distance < distance * 0.985:
+                continue
+            before_distance = minimum_distance(candidate)
 
             if before_distance > local_best_distance:
                 local_best_distance = before_distance
