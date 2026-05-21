@@ -181,6 +181,7 @@ namespace SurfaceRuins
             Log = Logger;
             I18N.Add("surface-ruins-menu", "Surface Ruins", "星表废墟");
             I18N.Add("surface-ruins-construct-current-planet", "Construct ruins on current planet", "在当前星球构造废墟");
+            I18N.Add("surface-ruins-build-geothermal-on-idle-ruins", "Build geothermal power stations on idle ruins", "在空闲废墟上建造地热发电站");
             I18N.Apply();
             MyConfigWindow.OnUICreated += CreateUI;
             Log.LogInfo($"Surface Ruins {PluginVersion} initialized");
@@ -197,6 +198,7 @@ namespace SurfaceRuins
             wnd.AddTabGroup(trans, "星表废墟", "tab-group-surface-ruins");
             RectTransform tab = wnd.AddTab(trans, "星表废墟");
             wnd.AddButton(10f, 10f, 260, tab, "surface-ruins-construct-current-planet", 16, "button-surface-ruins-construct-current-planet", ConstructRuinsOnCurrentPlanet);
+            wnd.AddButton(10f, 46f, 340, tab, "surface-ruins-build-geothermal-on-idle-ruins", 16, "button-surface-ruins-build-geothermal-on-idle-ruins", BuildGeothermalOnIdleRuinsCurrentPlanet);
         }
 
         private static void ConstructRuinsOnCurrentPlanet()
@@ -236,6 +238,227 @@ namespace SurfaceRuins
             }
 
             Report($"Surface Ruins: created {created}, skipped {skipped}, total {RuinPositions.Length} on {planet.displayName ?? planet.name}.");
+        }
+
+        private static void BuildGeothermalOnIdleRuinsCurrentPlanet()
+        {
+            PlanetData planet = GameMain.localPlanet;
+            if (planet == null)
+            {
+                Report("Surface Ruins: no current planet.");
+                return;
+            }
+
+            PlanetFactory factory = planet.factory;
+            if (factory == null || factory.ruinPool == null || factory.powerSystem == null)
+            {
+                Report($"Surface Ruins: planet {planet.displayName ?? planet.name} has no loaded factory or power system.");
+                return;
+            }
+
+            ItemProto geothermalItem = FindGeothermalPowerItem();
+            if (geothermalItem == null || geothermalItem.prefabDesc == null || !geothermalItem.prefabDesc.geothermal)
+            {
+                Report("Surface Ruins: geothermal power item not found.");
+                return;
+            }
+
+            int built = 0;
+            int skippedOccupied = 0;
+            int skippedBase = 0;
+            int skippedFailed = 0;
+            RuinData[] ruinPool = factory.ruinPool;
+            int ruinCursor = factory.ruinCursor;
+            for (int i = 1; i < ruinCursor; i++)
+            {
+                if (ruinPool[i].id != i || ruinPool[i].modelIndex != BasePitRuinModelIndex)
+                {
+                    continue;
+                }
+
+                if (HasGeothermalOnBaseRuin(factory, i))
+                {
+                    skippedOccupied++;
+                    continue;
+                }
+
+                if (HasBaseOnRuin(factory, i))
+                {
+                    skippedBase++;
+                    continue;
+                }
+
+                int entityId = BuildGeothermalEntity(factory, geothermalItem, i, ruinPool[i].pos);
+                if (entityId > 0)
+                {
+                    built++;
+                    continue;
+                }
+
+                skippedFailed++;
+            }
+
+            Report($"Surface Ruins: built geothermal {built}, occupied {skippedOccupied}, bound bases {skippedBase}, failed {skippedFailed} on {planet.displayName ?? planet.name}.");
+        }
+
+        private static ItemProto FindGeothermalPowerItem()
+        {
+            if (LDB.items?.dataArray == null)
+            {
+                return null;
+            }
+
+            ItemProto[] items = LDB.items.dataArray;
+            for (int i = 0; i < items.Length; i++)
+            {
+                ItemProto item = items[i];
+                if (item?.prefabDesc == null || !item.CanBuild || !item.IsEntity)
+                {
+                    continue;
+                }
+
+                if (item.prefabDesc.isPowerGen && item.prefabDesc.geothermal)
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasGeothermalOnBaseRuin(PlanetFactory factory, int baseRuinId)
+        {
+            if (factory == null || factory.powerSystem == null || baseRuinId <= 0)
+            {
+                return false;
+            }
+
+            PowerGeneratorComponent[] genPool = factory.powerSystem.genPool;
+            int genCursor = factory.powerSystem.genCursor;
+            for (int i = 1; i < genCursor; i++)
+            {
+                ref PowerGeneratorComponent gen = ref genPool[i];
+                if (gen.id == i && gen.geothermal && gen.baseRuinId == baseRuinId)
+                {
+                    return true;
+                }
+            }
+
+            PrebuildData[] prebuildPool = factory.prebuildPool;
+            int prebuildCursor = factory.prebuildCursor;
+            for (int i = 1; i < prebuildCursor; i++)
+            {
+                ref PrebuildData prebuild = ref prebuildPool[i];
+                if (prebuild.id != i || prebuild.paramCount <= 0 || prebuild.parameters == null || prebuild.parameters[0] != baseRuinId)
+                {
+                    continue;
+                }
+
+                ItemProto item = LDB.items.Select(prebuild.protoId);
+                if (item?.prefabDesc != null && item.prefabDesc.geothermal)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasBaseOnRuin(PlanetFactory factory, int baseRuinId)
+        {
+            if (factory?.enemySystem?.bases == null || baseRuinId <= 0)
+            {
+                return false;
+            }
+
+            var bases = factory.enemySystem.bases;
+            for (int i = 1; i < bases.cursor; i++)
+            {
+                var baseComponent = bases.buffer[i];
+                if (baseComponent != null && baseComponent.id == i && baseComponent.ruinId == baseRuinId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int BuildGeothermalEntity(PlanetFactory factory, ItemProto geothermalItem, int baseRuinId, Vector3 ruinPos)
+        {
+            if (factory?.planet == null || geothermalItem?.prefabDesc == null || baseRuinId <= 0)
+            {
+                return 0;
+            }
+
+            Vector3 buildPos = SnapGeothermalBuildPosition(factory.planet, ruinPos);
+            Quaternion buildRot = Maths.SphericalRotation(buildPos, 0f);
+
+            PrebuildData prebuild = default(PrebuildData);
+            prebuild.isDestroyed = false;
+            prebuild.protoId = (short)geothermalItem.ID;
+            prebuild.modelIndex = (short)geothermalItem.ModelIndex;
+            prebuild.pos = buildPos;
+            prebuild.pos2 = buildPos;
+            prebuild.rot = buildRot;
+            prebuild.rot2 = buildRot;
+            prebuild.InitParametersArray(1);
+            prebuild.parameters[0] = baseRuinId;
+
+            int prebuildId = factory.AddPrebuildDataWithComponents(prebuild);
+            if (prebuildId <= 0)
+            {
+                return 0;
+            }
+
+            EntityData entity = default(EntityData);
+            entity.protoId = prebuild.protoId;
+            entity.modelIndex = prebuild.modelIndex;
+            entity.pos = prebuild.pos;
+            entity.rot = prebuild.rot;
+            entity.alt = entity.pos.magnitude;
+            entity.tilt = prebuild.tilt;
+            entity.localized = factory.planet == GameMain.localPlanet && factory.planet.factoryLoaded;
+
+            int entityId = factory.AddEntityDataWithComponents(entity, prebuildId);
+            if (entityId <= 0)
+            {
+                factory.RemovePrebuildWithComponents(prebuildId);
+                return 0;
+            }
+
+            GameMain.mainPlayer?.controller?.actionBuild?.NotifyBuilt(-prebuildId, entityId);
+            factory.RemovePrebuildWithComponents(prebuildId);
+            GameMain.history?.MarkItemBuilt(prebuild.protoId);
+            if (factory.entityPool[entityId].beltId > 0)
+            {
+                factory.OnBeltBuilt(entityId);
+            }
+            if (factory.entityPool[entityId].inserterId > 0)
+            {
+                factory.OnInserterBuilt(entityId);
+            }
+            if (geothermalItem.prefabDesc.addonType != EAddonType.None)
+            {
+                factory.OnAddonBuilt(entityId);
+            }
+            factory.OnBuildEntity(entityId, prebuildId);
+            if (!PlanetFactory.batchBuild)
+            {
+                factory.OnSinglyBuildEntity(entityId, prebuildId);
+            }
+            GameMain.gameScenario?.NotifyOnBuild(factory.planet.id, factory.entityPool[entityId].protoId, entityId);
+            return entityId;
+        }
+
+        private static Vector3 SnapGeothermalBuildPosition(PlanetData planet, Vector3 ruinPos)
+        {
+            if (planet.aux != null)
+            {
+                return planet.aux.Snap(ruinPos, onTerrain: true);
+            }
+
+            return ruinPos.normalized * (planet.realRadius + SurfaceOffset);
         }
 
         private static Vector3 SnapToSurface(PlanetData planet, Vector3 templatePos)

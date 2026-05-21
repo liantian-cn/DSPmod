@@ -25,6 +25,20 @@ $buttonTextCn = -join @(
     [char]0x9020,
     [char]0x5e9f,
     [char]0x589f)
+$geothermalButtonTextCn = -join @(
+    [char]0x5728,
+    [char]0x7a7a,
+    [char]0x95f2,
+    [char]0x5e9f,
+    [char]0x589f,
+    [char]0x4e0a,
+    [char]0x5efa,
+    [char]0x9020,
+    [char]0x5730,
+    [char]0x70ed,
+    [char]0x53d1,
+    [char]0x7535,
+    [char]0x7ad9)
 
 function Assert-Contains {
     param(
@@ -58,12 +72,24 @@ Assert-Contains $source ([regex]::Escape("`"$menuTextCn`"")) "Missing Surface Ru
 Assert-Contains $source '"surface-ruins-construct-current-planet"' "Missing construct button localization key."
 Assert-Contains $source '"Construct ruins on current planet"' "Missing construct button English localization."
 Assert-Contains $source ([regex]::Escape("`"$buttonTextCn`"")) "Missing construct button Chinese localization."
+Assert-Contains $source '"surface-ruins-build-geothermal-on-idle-ruins"' "Missing geothermal button localization key."
+Assert-Contains $source '"Build geothermal power stations on idle ruins"' "Missing geothermal button English localization."
+Assert-Contains $source ([regex]::Escape("`"$geothermalButtonTextCn`"")) "Missing geothermal button Chinese localization."
 Assert-Contains $source "MyConfigWindow\.OnUICreated \+= CreateUI" "SurfaceRuins must register its UXAssist UI creation callback."
 Assert-Contains $source "MyConfigWindow\.OnUICreated -= CreateUI" "SurfaceRuins must unregister its UXAssist UI creation callback."
 Assert-Contains $source "private const short BasePitRuinModelIndex = 406;" "Base pit ruin model index must be 406."
 Assert-Contains $source "private const int Level30BasePitLifeTime = -31;" "Level 30 base pit ruin lifetime must be -31."
 Assert-Contains $source "private const float DuplicateRuinRadius = 50f;" "Duplicate ruin radius must be 50."
 Assert-Contains $source "AddRuinDataWithComponent" "SurfaceRuins must add ruins through PlanetFactory.AddRuinDataWithComponent."
+Assert-Contains $source "BuildGeothermalOnIdleRuinsCurrentPlanet" "SurfaceRuins must expose the idle-ruin geothermal button callback."
+Assert-Contains $source "FindGeothermalPowerItem" "SurfaceRuins must find the geothermal power item dynamically."
+Assert-Contains $source "HasGeothermalOnBaseRuin" "SurfaceRuins must skip ruins that already have geothermal power."
+Assert-Contains $source "HasBaseOnRuin" "SurfaceRuins must skip ruins still bound to a Dark Fog base."
+Assert-Contains $source "AddPrebuildDataWithComponents" "SurfaceRuins must use the vanilla prebuild path for geothermal construction."
+Assert-Contains $source "AddEntityDataWithComponents" "SurfaceRuins must create the final geothermal entity."
+Assert-Contains $source "RemovePrebuildWithComponents" "SurfaceRuins must clean up the temporary prebuild."
+Assert-Contains $source "prebuild\.InitParametersArray\(1\)" "Geothermal prebuild must allocate one parameter."
+Assert-Contains $source "prebuild\.parameters\[0\] = baseRuinId" "Geothermal prebuild must bind the target ruin id."
 Assert-Contains $source "UIRealtimeTip\.Popup" "SurfaceRuins should report result through UIRealtimeTip."
 
 $pointCount = ([regex]::Matches($source, "new Vector3\(")).Count
@@ -75,5 +101,11 @@ Assert-NotContains $source "CreateEnemyPlanetBase" "Fake ruins must not create r
 Assert-NotContains $source "DFGBaseComponent" "Fake ruins must not allocate DFGBaseComponent."
 Assert-NotContains $source "DFRelayComponent" "Fake ruins must not allocate DFRelayComponent."
 Assert-NotContains $source "NotifyBaseKilled" "Fake ruins must not use the real base death path."
+Assert-NotContains $source "CheckBaseCanRemoved" "Idle-ruin geothermal build must not use the removable-base path."
+Assert-NotContains $source "RemoveBase\(" "Idle-ruin geothermal build must not remove real Dark Fog bases."
+Assert-NotContains $source "UseHandItems" "Idle-ruin geothermal build must not consume hand items."
+Assert-NotContains $source "TakeTailItems" "Idle-ruin geothermal build must not consume package items."
+Assert-NotContains $source "FlattenTerrain" "Idle-ruin geothermal build must not require terrain flattening."
+Assert-NotContains $source "TrySetPowerGeneratorInvincible" "Idle-ruin geothermal build must not add generator invincibility."
 
 Write-Host "SurfaceRuins static tests passed."
