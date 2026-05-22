@@ -65,3 +65,4 @@ crashlytics-build.properties
 /Assembly-CSharp
 *.cache
 SurfaceRuins/output.csv
+/Harmony
