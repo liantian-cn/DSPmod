@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $moduleRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourcePath = Join-Path $moduleRoot "SurfaceRuins.cs"
 $projectPath = Join-Path $moduleRoot "SurfaceRuins.csproj"
+$generatorPath = Join-Path $moduleRoot "generate_icosphere_ruin_positions.py"
 
 if (-not (Test-Path $sourcePath)) {
     throw "Missing source file: $sourcePath"
@@ -12,8 +13,13 @@ if (-not (Test-Path $projectPath)) {
     throw "Missing project file: $projectPath"
 }
 
+if (-not (Test-Path $generatorPath)) {
+    throw "Missing ruin position generator: $generatorPath"
+}
+
 $source = Get-Content -Raw -Encoding UTF8 $sourcePath
 $project = Get-Content -Raw -Encoding UTF8 $projectPath
+$generator = Get-Content -Raw -Encoding UTF8 $generatorPath
 $menuTextCn = -join @([char]0x661f, [char]0x8868, [char]0x5e9f, [char]0x589f)
 $buttonTextCn = -join @(
     [char]0x5728,
@@ -93,9 +99,12 @@ Assert-Contains $source "prebuild\.parameters\[0\] = baseRuinId" "Geothermal pre
 Assert-Contains $source "UIRealtimeTip\.Popup" "SurfaceRuins should report result through UIRealtimeTip."
 
 $pointCount = ([regex]::Matches($source, "new Vector3\(")).Count
-if ($pointCount -ne 153) {
-    throw "Expected 153 embedded ruin positions, found $pointCount."
+if ($pointCount -ne 162) {
+    throw "Expected 162 embedded ruin positions, found $pointCount."
 }
+
+Assert-Contains $generator "DEFAULT_RADIUS = 200\.2" "Ruin position generator must default to DSP orbit radius 200.2."
+Assert-Contains $generator "DEFAULT_FREQUENCY = 4" "Ruin position generator must use frequency 4 for 162 icosphere vertices."
 
 Assert-NotContains $source "CreateEnemyPlanetBase" "Fake ruins must not create real Dark Fog bases."
 Assert-NotContains $source "DFGBaseComponent" "Fake ruins must not allocate DFGBaseComponent."
