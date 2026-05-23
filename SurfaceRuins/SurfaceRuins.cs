@@ -1,4 +1,4 @@
-using BepInEx;
+﻿using BepInEx;
 using BepInEx.Logging;
 using UnityEngine;
 using UXAssist.Common;
@@ -19,51 +19,8 @@ namespace SurfaceRuins
 
         internal static ManualLogSource Log;
 
-        private static readonly Vector3[] RuinPositions =
+        private static readonly Vector3[] LowLatitudeRuinPositions =
         {
-            new Vector3(0.000000f, 0.000000f, 200.200000f),
-            new Vector3(0.000000f, -59.107410f, 191.275597f),
-            new Vector3(0.000000f, 59.107410f, 191.275597f),
-            new Vector3(-52.625684f, -32.524462f, 190.401515f),
-            new Vector3(52.625684f, -32.524462f, 190.401515f),
-            new Vector3(52.625684f, 32.524462f, 190.401515f),
-            new Vector3(-52.625684f, 32.524462f, 190.401515f),
-            new Vector3(-47.818899f, -88.661115f, 173.010403f),
-            new Vector3(47.818899f, -88.661115f, 173.010403f),
-            new Vector3(47.818899f, 88.661115f, 173.010403f),
-            new Vector3(-47.818899f, 88.661115f, 173.010403f),
-            new Vector3(0.000000f, -105.251369f, 170.300292f),
-            new Vector3(105.251369f, 0.000000f, 170.300292f),
-            new Vector3(0.000000f, 105.251369f, 170.300292f),
-            new Vector3(-105.251369f, 0.000000f, 170.300292f),
-            new Vector3(-100.100000f, -61.865202f, 161.965202f),
-            new Vector3(100.100000f, -61.865202f, 161.965202f),
-            new Vector3(100.100000f, 61.865202f, 161.965202f),
-            new Vector3(-100.100000f, 61.865202f, 161.965202f),
-            new Vector3(-29.553705f, -136.480014f, 143.456698f),
-            new Vector3(29.553705f, -136.480014f, 143.456698f),
-            new Vector3(29.553705f, 136.480014f, 143.456698f),
-            new Vector3(-29.553705f, 136.480014f, 143.456698f),
-            new Vector3(-85.150146f, -117.674608f, 137.775830f),
-            new Vector3(85.150146f, -117.674608f, 137.775830f),
-            new Vector3(85.150146f, 117.674608f, 137.775830f),
-            new Vector3(-85.150146f, 117.674608f, 137.775830f),
-            new Vector3(-143.456698f, -29.553705f, 136.480014f),
-            new Vector3(143.456698f, -29.553705f, 136.480014f),
-            new Vector3(143.456698f, 29.553705f, 136.480014f),
-            new Vector3(-143.456698f, 29.553705f, 136.480014f),
-            new Vector3(-137.775830f, -85.150146f, 117.674608f),
-            new Vector3(137.775830f, -85.150146f, 117.674608f),
-            new Vector3(137.775830f, 85.150146f, 117.674608f),
-            new Vector3(-137.775830f, 85.150146f, 117.674608f),
-            new Vector3(0.000000f, -170.300292f, 105.251369f),
-            new Vector3(170.300292f, 0.000000f, 105.251369f),
-            new Vector3(0.000000f, 170.300292f, 105.251369f),
-            new Vector3(-170.300292f, 0.000000f, 105.251369f),
-            new Vector3(-61.865202f, -161.965202f, 100.100000f),
-            new Vector3(61.865202f, -161.965202f, 100.100000f),
-            new Vector3(61.865202f, 161.965202f, 100.100000f),
-            new Vector3(-61.865202f, 161.965202f, 100.100000f),
             new Vector3(-173.010403f, -47.818899f, 88.661115f),
             new Vector3(173.010403f, -47.818899f, 88.661115f),
             new Vector3(173.010403f, 47.818899f, 88.661115f),
@@ -139,7 +96,35 @@ namespace SurfaceRuins
             new Vector3(-173.010403f, -47.818899f, -88.661115f),
             new Vector3(173.010403f, -47.818899f, -88.661115f),
             new Vector3(173.010403f, 47.818899f, -88.661115f),
-            new Vector3(-173.010403f, 47.818899f, -88.661115f),
+            new Vector3(-173.010403f, 47.818899f, -88.661115f)
+        };
+
+        private static readonly Vector3[] MidLatitudeRuinPositions =
+        {
+            new Vector3(-29.553705f, -136.480014f, 143.456698f),
+            new Vector3(29.553705f, -136.480014f, 143.456698f),
+            new Vector3(29.553705f, 136.480014f, 143.456698f),
+            new Vector3(-29.553705f, 136.480014f, 143.456698f),
+            new Vector3(-85.150146f, -117.674608f, 137.775830f),
+            new Vector3(85.150146f, -117.674608f, 137.775830f),
+            new Vector3(85.150146f, 117.674608f, 137.775830f),
+            new Vector3(-85.150146f, 117.674608f, 137.775830f),
+            new Vector3(-143.456698f, -29.553705f, 136.480014f),
+            new Vector3(143.456698f, -29.553705f, 136.480014f),
+            new Vector3(143.456698f, 29.553705f, 136.480014f),
+            new Vector3(-143.456698f, 29.553705f, 136.480014f),
+            new Vector3(-137.775830f, -85.150146f, 117.674608f),
+            new Vector3(137.775830f, -85.150146f, 117.674608f),
+            new Vector3(137.775830f, 85.150146f, 117.674608f),
+            new Vector3(-137.775830f, 85.150146f, 117.674608f),
+            new Vector3(0.000000f, -170.300292f, 105.251369f),
+            new Vector3(170.300292f, 0.000000f, 105.251369f),
+            new Vector3(0.000000f, 170.300292f, 105.251369f),
+            new Vector3(-170.300292f, 0.000000f, 105.251369f),
+            new Vector3(-61.865202f, -161.965202f, 100.100000f),
+            new Vector3(61.865202f, -161.965202f, 100.100000f),
+            new Vector3(61.865202f, 161.965202f, 100.100000f),
+            new Vector3(-61.865202f, 161.965202f, 100.100000f),
             new Vector3(-61.865202f, -161.965202f, -100.100000f),
             new Vector3(61.865202f, -161.965202f, -100.100000f),
             new Vector3(61.865202f, 161.965202f, -100.100000f),
@@ -163,7 +148,30 @@ namespace SurfaceRuins
             new Vector3(-29.553705f, -136.480014f, -143.456698f),
             new Vector3(29.553705f, -136.480014f, -143.456698f),
             new Vector3(29.553705f, 136.480014f, -143.456698f),
-            new Vector3(-29.553705f, 136.480014f, -143.456698f),
+            new Vector3(-29.553705f, 136.480014f, -143.456698f)
+        };
+
+        private static readonly Vector3[] HighLatitudeRuinPositions =
+        {
+            new Vector3(0.000000f, 0.000000f, 200.200000f),
+            new Vector3(0.000000f, -59.107410f, 191.275597f),
+            new Vector3(0.000000f, 59.107410f, 191.275597f),
+            new Vector3(-52.625684f, -32.524462f, 190.401515f),
+            new Vector3(52.625684f, -32.524462f, 190.401515f),
+            new Vector3(52.625684f, 32.524462f, 190.401515f),
+            new Vector3(-52.625684f, 32.524462f, 190.401515f),
+            new Vector3(-47.818899f, -88.661115f, 173.010403f),
+            new Vector3(47.818899f, -88.661115f, 173.010403f),
+            new Vector3(47.818899f, 88.661115f, 173.010403f),
+            new Vector3(-47.818899f, 88.661115f, 173.010403f),
+            new Vector3(0.000000f, -105.251369f, 170.300292f),
+            new Vector3(105.251369f, 0.000000f, 170.300292f),
+            new Vector3(0.000000f, 105.251369f, 170.300292f),
+            new Vector3(-105.251369f, 0.000000f, 170.300292f),
+            new Vector3(-100.100000f, -61.865202f, 161.965202f),
+            new Vector3(100.100000f, -61.865202f, 161.965202f),
+            new Vector3(100.100000f, 61.865202f, 161.965202f),
+            new Vector3(-100.100000f, 61.865202f, 161.965202f),
             new Vector3(-100.100000f, -61.865202f, -161.965202f),
             new Vector3(100.100000f, -61.865202f, -161.965202f),
             new Vector3(100.100000f, 61.865202f, -161.965202f),
@@ -185,11 +193,17 @@ namespace SurfaceRuins
             new Vector3(0.000000f, 0.000000f, -200.200000f)
         };
 
+        private const string LowLatitudeConstructButtonKey = "surface-ruins-construct-low-latitude";
+        private const string MidLatitudeConstructButtonKey = "surface-ruins-construct-mid-latitude";
+        private const string HighLatitudeConstructButtonKey = "surface-ruins-construct-high-latitude";
+
         public void Awake()
         {
             Log = Logger;
             I18N.Add("surface-ruins-menu", "Surface Ruins", "星表废墟");
-            I18N.Add("surface-ruins-construct-current-planet", "Construct ruins on current planet", "在当前星球构造废墟");
+            I18N.Add(LowLatitudeConstructButtonKey, "Construct low-latitude ruins", "构造低纬度废墟");
+            I18N.Add(MidLatitudeConstructButtonKey, "Construct mid-latitude ruins", "构造中纬度废墟");
+            I18N.Add(HighLatitudeConstructButtonKey, "Construct high-latitude ruins", "构造高纬度废墟");
             I18N.Add("surface-ruins-build-geothermal-on-idle-ruins", "Build geothermal power stations on idle ruins", "在空闲废墟上建造地热发电站");
             I18N.Apply();
             MyConfigWindow.OnUICreated += CreateUI;
@@ -206,11 +220,28 @@ namespace SurfaceRuins
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, "星表废墟", "tab-group-surface-ruins");
             RectTransform tab = wnd.AddTab(trans, "星表废墟");
-            wnd.AddButton(10f, 10f, 260, tab, "surface-ruins-construct-current-planet", 16, "button-surface-ruins-construct-current-planet", ConstructRuinsOnCurrentPlanet);
-            wnd.AddButton(10f, 46f, 340, tab, "surface-ruins-build-geothermal-on-idle-ruins", 16, "button-surface-ruins-build-geothermal-on-idle-ruins", BuildGeothermalOnIdleRuinsCurrentPlanet);
+            wnd.AddButton(10f, 10f, 260, tab, LowLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-low-latitude", ConstructLowLatitudeRuinsOnCurrentPlanet);
+            wnd.AddButton(10f, 46f, 260, tab, MidLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-mid-latitude", ConstructMidLatitudeRuinsOnCurrentPlanet);
+            wnd.AddButton(10f, 82f, 260, tab, HighLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-high-latitude", ConstructHighLatitudeRuinsOnCurrentPlanet);
+            wnd.AddButton(10f, 118f, 340, tab, "surface-ruins-build-geothermal-on-idle-ruins", 16, "button-surface-ruins-build-geothermal-on-idle-ruins", BuildGeothermalOnIdleRuinsCurrentPlanet);
         }
 
-        private static void ConstructRuinsOnCurrentPlanet()
+        private static void ConstructLowLatitudeRuinsOnCurrentPlanet()
+        {
+            ConstructRuinsOnCurrentPlanet(LowLatitudeRuinPositions, "low-latitude");
+        }
+
+        private static void ConstructMidLatitudeRuinsOnCurrentPlanet()
+        {
+            ConstructRuinsOnCurrentPlanet(MidLatitudeRuinPositions, "mid-latitude");
+        }
+
+        private static void ConstructHighLatitudeRuinsOnCurrentPlanet()
+        {
+            ConstructRuinsOnCurrentPlanet(HighLatitudeRuinPositions, "high-latitude");
+        }
+
+        private static void ConstructRuinsOnCurrentPlanet(Vector3[] ruinPositions, string bandName)
         {
             PlanetData planet = GameMain.localPlanet;
             if (planet == null)
@@ -228,9 +259,9 @@ namespace SurfaceRuins
 
             int created = 0;
             int skipped = 0;
-            for (int i = 0; i < RuinPositions.Length; i++)
+            for (int i = 0; i < ruinPositions.Length; i++)
             {
-                Vector3 pos = SnapToSurface(planet, RuinPositions[i]);
+                Vector3 pos = SnapToSurface(planet, ruinPositions[i]);
                 if (HasRuinWithin(factory, pos, DuplicateRuinRadius))
                 {
                     skipped++;
@@ -246,7 +277,7 @@ namespace SurfaceRuins
                 created++;
             }
 
-            Report($"Surface Ruins: created {created}, skipped {skipped}, total {RuinPositions.Length} on {planet.displayName ?? planet.name}.");
+            Report($"Surface Ruins: created {created}, skipped {skipped}, total {ruinPositions.Length} {bandName} ruins on {planet.displayName ?? planet.name}.");
         }
 
         private static void BuildGeothermalOnIdleRuinsCurrentPlanet()
@@ -514,4 +545,4 @@ namespace SurfaceRuins
             UIRealtimeTip.Popup(message, sound: false);
         }
     }
-}
+}

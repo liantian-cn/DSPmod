@@ -1,4 +1,4 @@
-# Surface Ruins
+﻿# Surface Ruins
 
 中文名：`星表废墟`
 
@@ -6,13 +6,20 @@
 
 ## 功能
 
-插件会在 UXAssist 配置窗口里添加一个 `星表废墟` 分组，目前包含两个按钮：
+插件会在 UXAssist 配置窗口里添加一个 `星表废墟` 分组，目前包含四个按钮：
 
-- `在当前星球构造废墟`
+- `构造低纬度废墟`
+- `构造中纬度废墟`
+- `构造高纬度废墟`
 - `在空闲废墟上建造地热发电站`
 
-第一个按钮会在当前本地星球上批量创建一组 30 级黑雾基地坑废墟。
-第二个按钮会扫描当前星球上的 406 号基地坑废墟，只对“没有已建地热、没有地热预建、也没有真实黑雾基地绑定”的空闲废墟创建地热发电站。
+前三个按钮分别在当前本地星球上生成三组 30 级黑雾基地坑废墟，按绝对纬度分组：
+
+- 低纬度组：南北纬 28.5 度以内
+- 中纬度组：南北纬 28.5 到 46.5 度之间
+- 高纬度组：南北纬 46.5 度以上
+
+第四个按钮会扫描当前星球上的 406 号基地坑废墟，只对“没有已建地热、没有地热预建、也没有真实黑雾基地绑定”的空闲废墟创建地热发电站。
 
 ## 原理
 
@@ -70,7 +77,13 @@ prebuild.parameters[0] = baseRuinId;
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\SurfaceRuins\SurfaceRuins.Tests.ps1
-dotnet build SurfaceRuins\SurfaceRuins.slnx
+python .\SurfaceRuins\generate_icosphere_ruin_positions.py --write .\SurfaceRuins\SurfaceRuins.cs
+```
+
+脚本会同时导出同名 CSV：
+
+```text
+SurfaceRuins\generate_icosphere_ruin_positions.csv
 ```
 
 输出 DLL 位于：
