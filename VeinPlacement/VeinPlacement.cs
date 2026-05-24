@@ -163,14 +163,29 @@ namespace VeinPlacement
         private static List<Vector3> PlaceGroupCenters(PlanetData planet, List<VeinGroupWork> groups, float initialLongitude, DotNet35Random rng)
         {
             List<Vector3> placed = new List<Vector3>(groups.Count);
-            Vector3 anchor = RandomDirectionInTargetWindow(initialLongitude, rng).normalized;
+            Vector3 startPoint;
+            if (!TryFindStartPoint(planet, groups[0], initialLongitude, rng, placed, out startPoint))
+            {
+                startPoint = FindAnyCenter(planet, groups[0], initialLongitude, rng, placed);
+            }
 
-            for (int i = 0; i < groups.Count; i++)
+            placed.Add(startPoint);
+            Vector3 anchor = startPoint;
+
+            for (int i = 1; i < groups.Count; i++)
             {
                 Vector3 center;
-                if (!TryPlaceOneGroupCenter(planet, groups[i], initialLongitude, rng, placed, anchor, out center))
+                if (!TryPlaceBranchCenter(planet, groups[i], initialLongitude, rng, placed, anchor, out center))
                 {
-                    center = FindAnyCenter(planet, groups[i], initialLongitude, rng, placed);
+                    if (!TryPlaceBranchCenter(planet, groups[i], initialLongitude, rng, placed, startPoint, out center))
+                    {
+                        if (!TryFindStartPoint(planet, groups[i], initialLongitude, rng, placed, out center))
+                        {
+                            center = FindAnyCenter(planet, groups[i], initialLongitude, rng, placed);
+                        }
+
+                        startPoint = center;
+                    }
                 }
 
                 placed.Add(center);
@@ -180,7 +195,7 @@ namespace VeinPlacement
             return new List<Vector3>(placed);
         }
 
-        private static bool TryPlaceOneGroupCenter(PlanetData planet, VeinGroupWork group, float initialLongitude, DotNet35Random rng, List<Vector3> placed, Vector3 anchor, out Vector3 center)
+        private static bool TryFindStartPoint(PlanetData planet, VeinGroupWork group, float initialLongitude, DotNet35Random rng, List<Vector3> placed, out Vector3 center)
         {
             float num = 2.1f / planet.radius;
             float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
@@ -188,7 +203,31 @@ namespace VeinPlacement
 
             for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
             {
-                Vector3 candidate = RandomDirectionBetween(anchor, rng, minDistanceSqr, 3f, initialLongitude);
+                Vector3 candidate = RandomDirectionInTargetWindow(initialLongitude, rng);
+                if (IsValidCenter(candidate, placed, minDistanceSqr))
+                {
+                    center = candidate.normalized;
+                    return true;
+                }
+            }
+
+            center = Vector3.up;
+            return false;
+        }
+
+        private static bool TryPlaceBranchCenter(PlanetData planet, VeinGroupWork group, float initialLongitude, DotNet35Random rng, List<Vector3> placed, Vector3 anchor, out Vector3 center)
+        {
+            float num = 2.1f / planet.radius;
+            float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
+            float minDistanceSqr = num * num * spacing;
+
+            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
+            {
+                Vector3 candidate;
+                if (!TryRandomDirectionBetween(anchor, rng, minDistanceSqr, 2f, initialLongitude, out candidate))
+                {
+                    continue;
+                }
 
                 bool tooClose = false;
                 for (int i = 0; i < placed.Count; i++)
@@ -205,33 +244,6 @@ namespace VeinPlacement
                     center = candidate.normalized;
                     return true;
                 }
-            }
-
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-            {
-                Vector3 candidate = RandomDirectionInTargetWindow(initialLongitude, rng);
-                if (IsValidCenter(candidate, placed, minDistanceSqr))
-                {
-                    center = candidate.normalized;
-                    return true;
-                }
-            }
-
-            float spacingScale = 1f;
-            for (int relax = 0; relax < GroupPlacementRelaxPasses; relax++)
-            {
-                float relaxedMinDistanceSqr = minDistanceSqr * spacingScale;
-                for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-                {
-                    Vector3 candidate = RandomDirectionBetween(anchor, rng, relaxedMinDistanceSqr, 3f, initialLongitude);
-                    if (IsValidCenter(candidate, placed, relaxedMinDistanceSqr))
-                    {
-                        center = candidate.normalized;
-                        return true;
-                    }
-                }
-
-                spacingScale *= 0.85f;
             }
 
             center = Vector3.up;
@@ -279,20 +291,21 @@ namespace VeinPlacement
             return DirectionFromLatLon(lat, lon);
         }
 
-        private static Vector3 RandomDirectionBetween(Vector3 anchor, DotNet35Random rng, float minDistanceSqr, float maxDistanceScale, float centerLongitude)
+        private static bool TryRandomDirectionBetween(Vector3 anchor, DotNet35Random rng, float minDistanceSqr, float maxDistanceScale, float centerLongitude, out Vector3 candidate)
         {
-            Vector3 candidate;
             for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
             {
                 candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
                 float distanceSqr = (candidate - anchor).sqrMagnitude;
                 if (distanceSqr > minDistanceSqr && distanceSqr <= minDistanceSqr * maxDistanceScale)
                 {
-                    return candidate.normalized;
+                    candidate = candidate.normalized;
+                    return true;
                 }
             }
 
-            return RandomDirectionInTargetWindow(centerLongitude, rng).normalized;
+            candidate = Vector3.zero;
+            return false;
         }
 
         private static bool IsValidCenter(Vector3 candidate, List<Vector3> placed, float minDistanceSqr)
