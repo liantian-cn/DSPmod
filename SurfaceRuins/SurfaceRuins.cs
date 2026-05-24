@@ -16,6 +16,8 @@ namespace SurfaceRuins
         private const int Level30BasePitLifeTime = -31;
         private const float DuplicateRuinRadius = 50f;
         private const float SurfaceOffset = 0.2f;
+        private const float LowLatitudeMax = 28.5f;
+        private const float MidLatitudeMax = 46.5f;
 
         internal static ManualLogSource Log;
 
@@ -226,22 +228,29 @@ namespace SurfaceRuins
             wnd.AddButton(10f, 118f, 340, tab, "surface-ruins-build-geothermal-on-idle-ruins", 16, "button-surface-ruins-build-geothermal-on-idle-ruins", BuildGeothermalOnIdleRuinsCurrentPlanet);
         }
 
+        private enum LatitudeBand
+        {
+            Low,
+            Mid,
+            High
+        }
+
         private static void ConstructLowLatitudeRuinsOnCurrentPlanet()
         {
-            ConstructRuinsOnCurrentPlanet(LowLatitudeRuinPositions, "low-latitude");
+            ConstructRuinsOnCurrentPlanet(LatitudeBand.Low, "low-latitude");
         }
 
         private static void ConstructMidLatitudeRuinsOnCurrentPlanet()
         {
-            ConstructRuinsOnCurrentPlanet(MidLatitudeRuinPositions, "mid-latitude");
+            ConstructRuinsOnCurrentPlanet(LatitudeBand.Mid, "mid-latitude");
         }
 
         private static void ConstructHighLatitudeRuinsOnCurrentPlanet()
         {
-            ConstructRuinsOnCurrentPlanet(HighLatitudeRuinPositions, "high-latitude");
+            ConstructRuinsOnCurrentPlanet(LatitudeBand.High, "high-latitude");
         }
 
-        private static void ConstructRuinsOnCurrentPlanet(Vector3[] ruinPositions, string bandName)
+        private static void ConstructRuinsOnCurrentPlanet(LatitudeBand targetBand, string bandName)
         {
             PlanetData planet = GameMain.localPlanet;
             if (planet == null)
@@ -259,9 +268,16 @@ namespace SurfaceRuins
 
             int created = 0;
             int skipped = 0;
+            Vector3[] ruinPositions = GetAllRuinPositions();
             for (int i = 0; i < ruinPositions.Length; i++)
             {
-                Vector3 pos = SnapToSurface(planet, ruinPositions[i]);
+                Vector3 templatePos = ruinPositions[i];
+                if (GetLatitudeBand(templatePos) != targetBand)
+                {
+                    continue;
+                }
+
+                Vector3 pos = SnapToSurface(planet, templatePos);
                 if (HasRuinWithin(factory, pos, DuplicateRuinRadius))
                 {
                     skipped++;
@@ -277,7 +293,64 @@ namespace SurfaceRuins
                 created++;
             }
 
-            Report($"Surface Ruins: created {created}, skipped {skipped}, total {ruinPositions.Length} {bandName} ruins on {planet.displayName ?? planet.name}.");
+            Report($"Surface Ruins: created {created}, skipped {skipped}, total {CountRuinPositions(targetBand)} {bandName} ruins on {planet.displayName ?? planet.name}.");
+        }
+
+        private static Vector3[] GetAllRuinPositions()
+        {
+            Vector3[] positions = new Vector3[LowLatitudeRuinPositions.Length + MidLatitudeRuinPositions.Length + HighLatitudeRuinPositions.Length];
+            int offset = 0;
+            for (int i = 0; i < LowLatitudeRuinPositions.Length; i++)
+            {
+                positions[offset + i] = LowLatitudeRuinPositions[i];
+            }
+
+            offset += LowLatitudeRuinPositions.Length;
+            for (int i = 0; i < MidLatitudeRuinPositions.Length; i++)
+            {
+                positions[offset + i] = MidLatitudeRuinPositions[i];
+            }
+
+            offset += MidLatitudeRuinPositions.Length;
+            for (int i = 0; i < HighLatitudeRuinPositions.Length; i++)
+            {
+                positions[offset + i] = HighLatitudeRuinPositions[i];
+            }
+
+            return positions;
+        }
+
+        private static int CountRuinPositions(LatitudeBand targetBand)
+        {
+            int count = 0;
+            Vector3[] positions = GetAllRuinPositions();
+            for (int i = 0; i < positions.Length; i++)
+            {
+                if (GetLatitudeBand(positions[i]) == targetBand)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static LatitudeBand GetLatitudeBand(Vector3 position)
+        {
+            Vector3 normalized = position.normalized;
+            float latitude = Mathf.Asin(Mathf.Clamp(normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
+            float absLatitude = Mathf.Abs(latitude);
+            if (absLatitude < LowLatitudeMax)
+            {
+                return LatitudeBand.Low;
+            }
+
+            if (absLatitude < MidLatitudeMax)
+            {
+                return LatitudeBand.Mid;
+            }
+
+            return LatitudeBand.High;
         }
 
         private static void BuildGeothermalOnIdleRuinsCurrentPlanet()
@@ -545,4 +618,5 @@ namespace SurfaceRuins
             UIRealtimeTip.Popup(message, sound: false);
         }
     }
-}
+}
+

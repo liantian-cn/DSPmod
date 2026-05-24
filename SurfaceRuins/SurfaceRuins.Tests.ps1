@@ -111,6 +111,7 @@ if ($pointCount -ne 162) {
 Assert-Contains $generator 'DEFAULT_RADIUS = 200\.2' "Ruin position generator must default to DSP orbit radius 200.2."
 Assert-Contains $generator 'DEFAULT_FREQUENCY = 4' "Ruin position generator must use frequency 4 for 162 icosphere vertices."
 Assert-Contains $generator 'DEFAULT_CSV_PATH = Path\(__file__\)\.with_suffix\("\.csv"\)' "Generator must default to a CSV sidecar path."
+Assert-Contains $generator 'ratio = max\(-1\.0, min\(1\.0, y / length\)\)' "Generator must compute latitude from the Y axis."
 Assert-Contains $generator 'latitude_deg' "Generator must compute latitude metadata."
 Assert-Contains $generator 'band_for_latitude' "Generator must classify points into latitude bands."
 Assert-Contains $generator 'format_csharp_grouped_arrays' "Generator must emit the grouped C# arrays."
@@ -146,6 +147,9 @@ foreach ($line in $csv | Select-Object -Skip 1) {
 if ($bandCounts['low'] -ne 76 -or $bandCounts['mid'] -ne 48 -or $bandCounts['high'] -ne 38) {
     throw "Unexpected CSV band counts: low=$($bandCounts['low']) mid=$($bandCounts['mid']) high=$($bandCounts['high'])"
 }
+
+Assert-Contains $source 'GetLatitudeBand' "SurfaceRuins must classify ruin positions by latitude."
+Assert-Contains $source 'normalized\.y' "SurfaceRuins must use the Y axis for latitude."
 
 Assert-NotContains $source 'CreateEnemyPlanetBase' "Fake ruins must not create real Dark Fog bases."
 Assert-NotContains $source 'DFGBaseComponent' "Fake ruins must not allocate DFGBaseComponent."

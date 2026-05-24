@@ -48,7 +48,7 @@ def latitude_degrees(point: tuple[float, float, float]) -> float:
     length = math.sqrt(x * x + y * y + z * z)
     if length <= 0.0:
         return 0.0
-    ratio = max(-1.0, min(1.0, z / length))
+    ratio = max(-1.0, min(1.0, y / length))
     return math.degrees(math.asin(ratio))
 
 
