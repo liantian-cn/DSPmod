@@ -41,7 +41,6 @@ namespace HardFog
         private static UIButton buttonClearStar;
         private static UIButton buttonFillHive;
         private static UIButton buttonResetHive;
-        private static UIButton buttonAddVein;
 
 
 
@@ -77,7 +76,7 @@ namespace HardFog
 
             MyConfigWindow.OnUICreated += CreateUI;
 
-            MoreFrequentRelaysEnable.SettingChanged += (_, _) => MoreFrequentRelaysPatch.Enable(MoreFrequentRelaysEnable.Value);
+            MoreFrequentRelaysEnable.SettingChanged += (sender, args) => MoreFrequentRelaysPatch.Enable(MoreFrequentRelaysEnable.Value);
             //DysonSphereDebuffImmunityEnable.SettingChanged += (_, _) => DysonSphereDebuffImmunityPatch.Enable(DysonSphereDebuffImmunityEnable.Value);
             //SuperRayReceptionEnable.SettingChanged += (_, _) => SuperRayReceptionPatch.Enable(SuperRayReceptionEnable.Value);
             //DFSCoreSuperEnergyEnable.SettingChanged += (_, _) => DFSCoreSuperEnergyPatch.Enable(DFSCoreSuperEnergyEnable.Value);
@@ -662,7 +661,7 @@ namespace HardFog
                             HardFog.Logger.LogInfo("clear DFGBaseComponent:" + dfgbaseComponent.id + "  -> form count ： " + forms[j].unitCount);
                             forms[j].Clear();
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
                             HardFog.Logger.LogInfo("error to kill  forms" + j);
                         }
@@ -687,9 +686,9 @@ namespace HardFog
                     var combatStatId = enemyData.combatStatId;
                     planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsbuffer[combatStatId].originAstroId, ETargetType.CombatStat);
                     planetFactory.skillSystem.combatStats.Remove(combatStatId);
-                    planetFactory.KillEnemyFinally(player, i, ref CombatStat.empty);
+                    planetFactory.KillEnemyFinally(i, ref CombatStat.empty);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     HardFog.Logger.LogInfo("error to kill  KillEnemyFinally" + enemyData.id);
                 }
@@ -995,7 +994,7 @@ namespace HardFog
                 {
                     spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     HardFog.Logger.LogInfo("error to kill " + enemyId);
                 }
@@ -1043,35 +1042,7 @@ namespace HardFog
                     if (hive != null)
                     {
                         HardFog.Logger.LogInfo(star.displayName + " Add 1 hive");
-                        hive.isEmpty = false;
-                        hive.matterStatComplete = false;
-                        float num = Mathf.Pow(1f - hive.starData.safetyFactor, 1.4f);
-                        int num2 = RandomTable.Integer(ref hive.rtseed, 600);
-                        float initialGrowth = hive.history.combatSettings.initialGrowth;
-                        hive.ticks = 600 + (int)(num * 72000f) + num2;
-                        hive.ticks = (int)((float)hive.ticks * initialGrowth);
-                        hive.ticks = hive.InitialGrowthToTicks(hive.ticks);
-
-                        if (hive.ticks < 4)
-                        {
-                            hive.ticks = 4;
-                        }
-                        if (initialGrowth > 1f)
-                        {
-                            float num3 = initialGrowth - 1f;
-                            hive.evolve.rankBase = (int)((float)hive.evolve.rankBase * initialGrowth + 0.5f);
-                            hive.evolve.rankBase = hive.evolve.rankBase + (int)(num3 * 40f + 0.5f);
-                            if (hive.evolve.rankBase > 127)
-                            {
-                                hive.evolve.rankBase = 127;
-                            }
-                        }
-                        else if (initialGrowth < 1f)
-                        {
-                            hive.evolve.rankBase = (int)((float)hive.evolve.rankBase * Mathf.Lerp(initialGrowth, 1f, 0.5f) + 0.5f);
-                        }
-                        hive.isCarrierRealized = (hive.starData.id == hive.galaxy.birthStarId);
-                        hive.tindersInTransit = 0;
+                        hive.SetForNewGame();
 
                     }
                 }
@@ -1240,4 +1211,3 @@ namespace HardFog
 
     }
 }
-

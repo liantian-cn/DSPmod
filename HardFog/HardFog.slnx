@@ -1,6 +1,3 @@
 <Solution>
-  <Project Path="HardFog.csproj" Id="8cf264f1-e863-4eaf-b956-c8330da40ba6">
-    <BuildType Project="Release" />
-    <Build Solution="Debug|*" Project="false" />
-  </Project>
+  <Project Path="HardFog.csproj" Id="8cf264f1-e863-4eaf-b956-c8330da40ba6" />
 </Solution>
