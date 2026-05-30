@@ -305,6 +305,7 @@
   <ItemGroup>
     <Compile Include="HardFogWindow.cs" />
     <Compile Include="DarkFogControl.cs" />
+    <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,17 +1,11 @@
-﻿using BepInEx;
 using BepInEx.Logging;
 using UnityEngine;
-using UXAssist.Common;
 using UXAssist.UI;
 
-namespace SurfaceRuins
+namespace HardFog
 {
-    [BepInPlugin(PluginGuid, "Surface Ruins", PluginVersion)]
-    [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
-    public class SurfaceRuins : BaseUnityPlugin
+    internal static class SurfaceRuinControl
     {
-        private const string PluginGuid = "me.liantian.plugin.SurfaceRuins";
-        private const string PluginVersion = "0.0.1";
         private const short BasePitRuinModelIndex = 406;
         private const int Level30BasePitLifeTime = -31;
         private const float DuplicateRuinRadius = 50f;
@@ -152,40 +146,6 @@ namespace SurfaceRuins
             new Vector3(-21.452843f, -148.481667f, -132.563231f),
             new Vector3(-17.257428f, 148.481667f, -133.174381f)
         };
-
-        private const string LowLatitudeConstructButtonKey = "surface-ruins-construct-low-latitude";
-        private const string MidLatitudeConstructButtonKey = "surface-ruins-construct-mid-latitude";
-        private const string HighLatitudeConstructButtonKey = "surface-ruins-construct-high-latitude";
-
-        public void Awake()
-        {
-            Log = Logger;
-            I18N.Add("surface-ruins-menu", "Surface Ruins", "星表废墟");
-            I18N.Add(LowLatitudeConstructButtonKey, "Construct low-latitude ruins", "构造低纬度废墟");
-            I18N.Add(MidLatitudeConstructButtonKey, "Construct mid-latitude ruins", "构造中纬度废墟");
-            I18N.Add(HighLatitudeConstructButtonKey, "Construct high-latitude ruins", "构造高纬度废墟");
-            I18N.Add("surface-ruins-build-geothermal-on-idle-ruins", "Build geothermal power stations on idle ruins", "在空闲废墟上建造地热发电站");
-            I18N.Apply();
-            MyConfigWindow.OnUICreated += CreateUI;
-            Log.LogInfo($"Surface Ruins {PluginVersion} initialized");
-        }
-
-        public void OnDestroy()
-        {
-            MyConfigWindow.OnUICreated -= CreateUI;
-        }
-
-        private static void CreateUI(MyConfigWindow wnd, RectTransform trans)
-        {
-            wnd.AddSplitter(trans, 10f);
-            wnd.AddTabGroup(trans, "星表废墟", "tab-group-surface-ruins");
-            RectTransform tab = wnd.AddTab(trans, "星表废墟");
-            wnd.AddButton(10f, 10f, 260, tab, LowLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-low-latitude", ConstructLowLatitudeRuinsOnCurrentPlanet);
-            wnd.AddButton(10f, 46f, 260, tab, MidLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-mid-latitude", ConstructMidLatitudeRuinsOnCurrentPlanet);
-            wnd.AddButton(10f, 82f, 260, tab, HighLatitudeConstructButtonKey, 16, "button-surface-ruins-construct-high-latitude", ConstructHighLatitudeRuinsOnCurrentPlanet);
-            wnd.AddButton(10f, 118f, 340, tab, "surface-ruins-build-geothermal-on-idle-ruins", 16, "button-surface-ruins-build-geothermal-on-idle-ruins", BuildGeothermalOnIdleRuinsCurrentPlanet);
-        }
-
         private enum LatitudeBand
         {
             Low,
@@ -193,17 +153,17 @@ namespace SurfaceRuins
             High
         }
 
-        private static void ConstructLowLatitudeRuinsOnCurrentPlanet()
+        internal static void ConstructLowLatitudeRuinsOnCurrentPlanet()
         {
             ConstructRuinsOnCurrentPlanet(LatitudeBand.Low, "low-latitude");
         }
 
-        private static void ConstructMidLatitudeRuinsOnCurrentPlanet()
+        internal static void ConstructMidLatitudeRuinsOnCurrentPlanet()
         {
             ConstructRuinsOnCurrentPlanet(LatitudeBand.Mid, "mid-latitude");
         }
 
-        private static void ConstructHighLatitudeRuinsOnCurrentPlanet()
+        internal static void ConstructHighLatitudeRuinsOnCurrentPlanet()
         {
             ConstructRuinsOnCurrentPlanet(LatitudeBand.High, "high-latitude");
         }
@@ -311,7 +271,7 @@ namespace SurfaceRuins
             return LatitudeBand.High;
         }
 
-        private static void BuildGeothermalOnIdleRuinsCurrentPlanet()
+        internal static void BuildGeothermalOnIdleRuinsCurrentPlanet()
         {
             PlanetData planet = GameMain.localPlanet;
             if (planet == null)
