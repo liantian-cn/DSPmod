@@ -10,7 +10,7 @@ namespace HardFog
     {
         private const string PatchGuid = "me.liantian.plugin.HardFog.FogThreatDampener";
         private const int DampenIntervalHiveTicks = 30;
-        private const float ThreatMultiplier = 0.99f;
+        private const float ThreatMultiplier = 0.999f;
 
         internal static ConfigEntry<bool> EnabledConfig { get; private set; }
 

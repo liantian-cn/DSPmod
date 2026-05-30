@@ -9,8 +9,8 @@ namespace HardFog
     internal static class OverpoweredMechaFightersControl
     {
         private const string PatchGuid = "me.liantian.plugin.HardFog.OverpoweredMechaFighters";
-        private const float RangeMultiplier = 10f;
-        private const float DamageMultiplier = 10f;
+        private const float RangeMultiplier = 5f;
+        private const float DamageMultiplier = 5f;
 
         internal static ConfigEntry<bool> EnabledConfig { get; private set; }
 
