@@ -310,6 +310,7 @@
     <Compile Include="SmartRelayDispatchControl.cs" />
     <Compile Include="FasterResearchControl.cs" />
     <Compile Include="VeinPlacementControl.cs" />
+    <Compile Include="OverpoweredMechaFightersControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

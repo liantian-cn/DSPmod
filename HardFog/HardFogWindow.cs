@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.12")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.13")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -19,6 +19,7 @@ namespace HardFog
         private const string SmartRelayDispatchKey = "smart-relay-dispatch-enabled";
         private const string FasterResearchKey = "faster-research-enabled";
         private const string VeinPlacementKey = "vein-placement-enabled";
+        private const string OverpoweredMechaFightersKey = "overpowered-mecha-fighters-enabled";
         private const string ConstructLowLatitudeRuinsKey = "surface-ruins-construct-low-latitude";
         private const string ConstructMidLatitudeRuinsKey = "surface-ruins-construct-mid-latitude";
         private const string ConstructHighLatitudeRuinsKey = "surface-ruins-construct-high-latitude";
@@ -43,6 +44,7 @@ namespace HardFog
             SmartRelayDispatchControl.Init(Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Enable relay station dispatch only to markers."), Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             VeinPlacementControl.Init(Config.Bind("HardFog", "VeinPlacementEnabled", true, "Enable better vein placement for future planet vein generation."), Logger);
+            OverpoweredMechaFightersControl.Init(Config.Bind("HardFog", "OverpoweredMechaFightersEnabled", false, "Enable stronger mecha fighters: 10x range, 10x damage, and invincibility."), Logger);
 
             I18N.Add(WindowTitleKey, "Dark Fog Control", "黑雾操控");
             I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog on current planet", "清理当前星球的黑雾");
@@ -52,6 +54,7 @@ namespace HardFog
             I18N.Add(SmartRelayDispatchKey, "Relay stations only dispatch to markers", "中继站只发往信标");
             I18N.Add(FasterResearchKey, "Research Speed Multiplier", "研究倍速器");
             I18N.Add(VeinPlacementKey, "Better vein placement", "更好的矿物位置");
+            I18N.Add(OverpoweredMechaFightersKey, "Fighters fly farther", "战斗机更远的飞行距离");
             I18N.Add(ConstructLowLatitudeRuinsKey, "Construct low-latitude ruins", "构造低纬度废墟");
             I18N.Add(ConstructMidLatitudeRuinsKey, "Construct mid-latitude ruins", "构造中纬度废墟");
             I18N.Add(ConstructHighLatitudeRuinsKey, "Construct high-latitude ruins", "构造高纬度废墟");
@@ -69,6 +72,7 @@ namespace HardFog
             SmartRelayDispatchControl.Uninit();
             FasterResearchControl.Uninit();
             VeinPlacementControl.Uninit();
+            OverpoweredMechaFightersControl.Uninit();
         }
 
         private static void CreateUI(MyConfigWindow wnd, RectTransform trans)
@@ -93,6 +97,8 @@ namespace HardFog
             wnd.AddCheckBox(x, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
             y += 36f;
             wnd.AddCheckBox(x, y, tab, VeinPlacementControl.EnabledConfig, VeinPlacementKey, 16);
+            y += 36f;
+            wnd.AddCheckBox(x, y, tab, OverpoweredMechaFightersControl.EnabledConfig, OverpoweredMechaFightersKey, 16);
             y += 36f;
             constructLowLatitudeRuinsButton = wnd.AddButton(x, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
             y += 36f;
