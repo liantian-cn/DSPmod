@@ -1,47 +1,91 @@
 using System;
 using System.Collections.Generic;
-using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
 
-namespace VeinPlacement
+namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.VeinPlacement", "VeinPlacement", "0.0.1")]
-    public class VeinPlacement : BaseUnityPlugin
+    [HarmonyPatch]
+    internal static class VeinPlacementControl
     {
-        private const string PluginGuid = "me.liantian.plugin.VeinPlacement";
+        private const string PatchGuid = "me.liantian.plugin.HardFog.VeinPlacement";
         private const int ModSeedSalt = 0x56_50_30_31;
         private const float TargetLatitudeDegrees = 40f;
-        private const float TargetLongitudeDegrees = 90f;
+        private const float TargetLongitudeDegrees = 70f;
         private const float NormalGroupSpacing = 196f;
         private const float OilGroupSpacing = 100f;
-        private const float InnerVeinMinDistanceSqr = 0.6375f;
-        private const float InnerVeinMaxRadiusSqr = 15f;
+        private const float InnerVeinMinDistanceSqr = 0.5f;
+        private const float InnerVeinMaxRadiusSqr = 13f;
         private const int GroupPlacementAttempts = 12;
         private const int GroupPlacementRelaxPasses = 32;
         private const int LocalShapePasses = 20;
         private const int LocalFallbackAttempts = 8192;
 
-        internal static ManualLogSource Log;
+        internal static ConfigEntry<bool> EnabledConfig { get; private set; }
+
+        private static ManualLogSource Log;
+        private static Harmony harmony;
+        private static EventHandler settingChangedHandler;
 
         private static readonly AccessTools.FieldRef<PlanetAlgorithm, PlanetData> PlanetRef =
             AccessTools.FieldRefAccess<PlanetAlgorithm, PlanetData>("planet");
 
-        private Harmony harmony;
-
-        public void Awake()
+        internal static void Init(ConfigEntry<bool> enabledConfig, ManualLogSource log)
         {
-            Log = Logger;
-            harmony = new Harmony(PluginGuid);
-            harmony.PatchAll(typeof(VeinPlacement).Assembly);
-            Log.LogInfo("VeinPlacement 0.0.1 initialized");
+            if (EnabledConfig != null && settingChangedHandler != null)
+            {
+                EnabledConfig.SettingChanged -= settingChangedHandler;
+            }
+
+            Log = log;
+            EnabledConfig = enabledConfig;
+            settingChangedHandler = OnSettingChanged;
+            EnabledConfig.SettingChanged += settingChangedHandler;
+            SetActive(EnabledConfig.Value);
         }
 
-        public void OnDestroy()
+        internal static void Uninit()
         {
-            harmony?.UnpatchSelf();
+            if (EnabledConfig != null && settingChangedHandler != null)
+            {
+                EnabledConfig.SettingChanged -= settingChangedHandler;
+            }
+
+            SetActive(false);
+            settingChangedHandler = null;
+            EnabledConfig = null;
+            Log = null;
+        }
+
+        private static void OnSettingChanged(object sender, EventArgs args)
+        {
+            SetActive(EnabledConfig != null && EnabledConfig.Value);
+        }
+
+        private static void SetActive(bool active)
+        {
+            if (active)
+            {
+                if (harmony != null)
+                {
+                    return;
+                }
+
+                harmony = Harmony.CreateAndPatchAll(typeof(VeinPlacementControl), PatchGuid);
+                Log?.LogInfo("VeinPlacement enabled");
+                return;
+            }
+
+            if (harmony == null)
+            {
+                return;
+            }
+
+            harmony.UnpatchSelf();
             harmony = null;
+            Log?.LogInfo("VeinPlacement disabled");
         }
 
         private static void ApplyPlacement(PlanetAlgorithm algorithm)
@@ -459,58 +503,46 @@ namespace VeinPlacement
             }
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm), "GenerateVeins")]
-        private static class PlanetAlgorithmGenerateVeinsPatch
+        private static void PlanetAlgorithmGenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm0), "GenerateVeins")]
-        private static class PlanetAlgorithm0GenerateVeinsPatch
+        private static void PlanetAlgorithm0GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm7), "GenerateVeins")]
-        private static class PlanetAlgorithm7GenerateVeinsPatch
+        private static void PlanetAlgorithm7GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm11), "GenerateVeins")]
-        private static class PlanetAlgorithm11GenerateVeinsPatch
+        private static void PlanetAlgorithm11GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm12), "GenerateVeins")]
-        private static class PlanetAlgorithm12GenerateVeinsPatch
+        private static void PlanetAlgorithm12GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
 
+        [HarmonyPostfix]
         [HarmonyPatch(typeof(PlanetAlgorithm13), "GenerateVeins")]
-        private static class PlanetAlgorithm13GenerateVeinsPatch
+        private static void PlanetAlgorithm13GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
-            private static void Postfix(PlanetAlgorithm __instance)
-            {
-                ApplyPlacement(__instance);
-            }
+            ApplyPlacement(__instance);
         }
     }
 }

@@ -1,0 +1,331 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using BepInEx.Logging;
+
+namespace HardFog
+{
+    internal static class DarkFogControl
+    {
+        internal static ManualLogSource Log;
+
+        internal static void ClearCurrentPlanetDarkFog()
+        {
+            SaveCurrentGame();
+
+            if (GameMain.mainPlayer == null)
+            {
+                return;
+            }
+
+            PlanetData planet = GameMain.localPlanet;
+            if (planet == null)
+            {
+                return;
+            }
+
+            ClearPlanetDarkFog(planet);
+        }
+
+        private static void ClearPlanetDarkFog(PlanetData planet)
+        {
+            LogInfo("planet.name: " + planet.name);
+            LogInfo("astroId: " + planet.astroId);
+
+            PlanetFactory planetFactory = GameMain.data.GetOrCreateFactory(planet);
+            CombatStat[] combatStatsBuffer = planetFactory.skillSystem.combatStats.buffer;
+            ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
+
+            for (int i = 1; i < bases.cursor; i++)
+            {
+                DFGBaseComponent baseComponent = bases.buffer[i];
+                if (baseComponent == null)
+                {
+                    continue;
+                }
+
+                ClearGroundBaseFormations(baseComponent);
+            }
+
+            for (var i = planetFactory.enemyCursor - 1; i > 0; i--)
+            {
+                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
+                if (enemyData.id != i)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    LogInfo("KillEnemyFinally -> enemyData.id: " + enemyData.id);
+
+                    int combatStatId = enemyData.combatStatId;
+                    if (combatStatId > 0)
+                    {
+                        planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
+                        planetFactory.skillSystem.combatStats.Remove(combatStatId);
+                    }
+
+                    planetFactory.KillEnemyFinally(i, ref CombatStat.empty);
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to kill enemy " + enemyData.id);
+                }
+            }
+
+            SpaceSector spaceSector = GameMain.spaceSector;
+
+            for (var i = spaceSector.enemyCursor - 1; i > 0; i--)
+            {
+                ref EnemyData enemyData = ref spaceSector.enemyPool[i];
+                if (enemyData.id != i)
+                {
+                    continue;
+                }
+
+                if (enemyData.astroId != planet.id)
+                {
+                    continue;
+                }
+
+                LogInfo("KillEnemyFinal -> enemyData.id: " + enemyData.id);
+                spaceSector.KillEnemyFinal(enemyData.id, ref CombatStat.empty);
+            }
+        }
+
+        private static void ClearGroundBaseFormations(DFGBaseComponent baseComponent)
+        {
+            EnemyFormation[] formations = baseComponent.forms;
+            for (int i = 0; i < formations.Length; i++)
+            {
+                if (formations[i].unitCount <= 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    LogInfo("clear DFGBaseComponent:" + baseComponent.id + " -> form count: " + formations[i].unitCount);
+                    formations[i].Clear();
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to clear form " + i);
+                }
+            }
+        }
+
+        internal static void ClearCurrentStarSpaceDarkFog()
+        {
+            SaveCurrentGame();
+
+            if (GameMain.mainPlayer == null)
+            {
+                return;
+            }
+
+            StarData star = GameMain.localStar;
+            if (star == null)
+            {
+                return;
+            }
+
+            ClearStarSpaceDarkFog(star);
+        }
+
+        private static void ClearStarSpaceDarkFog(StarData star)
+        {
+            SpaceSector spaceSector = GameMain.spaceSector;
+            List<int> enemyIdsToKill = new List<int>();
+
+            for (var i = spaceSector.enemyCursor - 1; i > 0; i--)
+            {
+                ref EnemyData enemyData = ref spaceSector.enemyPool[i];
+                if (enemyData.id != i || enemyData.isInvincible || enemyData.dfSCoreId > 0 || enemyData.astroId != star.astroId)
+                {
+                    continue;
+                }
+
+                LogInfo("active relays -> " + enemyData.id);
+                enemyIdsToKill.Add(enemyData.id);
+            }
+
+            EnemyDFHiveSystem hive = spaceSector.dfHives[star.index];
+
+            while (hive != null)
+            {
+                if (hive.isAlive)
+                {
+                    LogInfo("hiveAstroId " + hive.hiveAstroId);
+                    LogInfo("rootEnemyId " + hive.rootEnemyId);
+
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.units, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.tinders, component => component.enemyId);
+                    CollectIdleRelayEnemyIds(spaceSector, enemyIdsToKill, hive);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.turrets, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.gammas, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.replicators, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.connectors, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.nodes, component => component.enemyId);
+                    CollectKillableEnemyIds(spaceSector, enemyIdsToKill, hive.builders, component => component.enemyId);
+
+                    ClearHiveFormations(hive);
+                    DrainHiveCoreBuilders(hive);
+                }
+
+                hive = hive.nextSibling;
+            }
+
+            foreach (int enemyId in enemyIdsToKill.Distinct())
+            {
+                try
+                {
+                    spaceSector.KillEnemyFinal(enemyId, ref CombatStat.empty);
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to kill " + enemyId);
+                }
+            }
+
+            MakeHiveCoresInvincible(star);
+        }
+
+        private static void CollectKillableEnemyIds<T>(SpaceSector spaceSector, List<int> enemyIds, DataPool<T> pool, Func<T, int> getEnemyId)
+            where T : struct, IPoolElement
+        {
+            for (var i = pool.cursor - 1; i > 0; i--)
+            {
+                int enemyId = getEnemyId(pool.buffer[i]);
+                if (CanKillSpaceEnemy(spaceSector, enemyId))
+                {
+                    enemyIds.Add(enemyId);
+                }
+            }
+        }
+
+        private static void CollectIdleRelayEnemyIds(SpaceSector spaceSector, List<int> enemyIds, EnemyDFHiveSystem hive)
+        {
+            for (var i = hive.idleRelayCount - 1; i > 0; i--)
+            {
+                DFRelayComponent relay = hive.relays.buffer[hive.idleRelayIds[i]];
+                if (CanKillSpaceEnemy(spaceSector, relay.enemyId))
+                {
+                    enemyIds.Add(relay.enemyId);
+                }
+            }
+        }
+
+        private static bool CanKillSpaceEnemy(SpaceSector spaceSector, int enemyId)
+        {
+            if (enemyId <= 0)
+            {
+                return false;
+            }
+
+            ref EnemyData enemyData = ref spaceSector.enemyPool[enemyId];
+            return !enemyData.isInvincible && enemyData.dfSCoreId <= 0;
+        }
+
+        private static void ClearHiveFormations(EnemyDFHiveSystem hive)
+        {
+            EnemyFormation[] formations = hive.forms;
+            for (int i = 0; i < formations.Length; i++)
+            {
+                if (formations[i].unitCount <= 0)
+                {
+                    continue;
+                }
+
+                LogInfo("clear form " + formations[i].unitCount);
+                formations[i].Clear();
+            }
+        }
+
+        private static void DrainHiveCoreBuilders(EnemyDFHiveSystem hive)
+        {
+            for (var i = hive.cores.cursor - 1; i > 0; i--)
+            {
+                ref EnemyBuilderComponent builder = ref hive.builders.buffer[hive.cores.buffer[i].builderId];
+                builder.matter = 0;
+                builder.energy = 0;
+            }
+        }
+
+        internal static void FillGalaxyWithDarkFogHives()
+        {
+            SaveCurrentGame();
+
+            if (GameMain.mainPlayer == null)
+            {
+                return;
+            }
+
+            GalaxyData galaxy = GameMain.galaxy;
+            SpaceSector spaceSector = GameMain.spaceSector;
+
+            for (int i = 0; i < galaxy.starCount; i++)
+            {
+                StarData star = galaxy.stars[i];
+                int targetHiveCount = Math.Min(star.maxHiveCount, 8);
+                int currentHiveCount = CountHives(spaceSector.dfHives[star.index]);
+
+                for (int j = 0; j < targetHiveCount - currentHiveCount; j++)
+                {
+                    EnemyDFHiveSystem hive = spaceSector.TryCreateNewHive(star);
+                    if (hive == null)
+                    {
+                        continue;
+                    }
+
+                    LogInfo(star.displayName + " Add 1 hive");
+                    hive.SetForNewGame();
+                }
+            }
+        }
+
+        private static int CountHives(EnemyDFHiveSystem hive)
+        {
+            int count = 0;
+            while (hive != null)
+            {
+                count++;
+                hive = hive.nextSibling;
+            }
+
+            return count;
+        }
+
+        private static void MakeHiveCoresInvincible(StarData star)
+        {
+            SpaceSector spaceSector = GameMain.spaceSector;
+            EnemyDFHiveSystem hive = spaceSector.dfHives[star.index];
+
+            while (hive != null)
+            {
+                for (var i = hive.cores.cursor - 1; i > 0; i--)
+                {
+                    ref EnemyData enemyData = ref spaceSector.enemyPool[hive.cores.buffer[i].enemyId];
+                    enemyData.isInvincible = true;
+                }
+
+                hive = hive.nextSibling;
+            }
+        }
+
+        private static void SaveCurrentGame()
+        {
+            DateTime now = DateTime.Now;
+            string currentTimeString = now.ToString("yyyy-MM-dd HH:mm:ss");
+            string seedString = GameMain.data.gameDesc.galaxySeed.ToString("00000000");
+            string saveName = string.Format("[{0}] {1}", seedString, currentTimeString);
+            GameSave.SaveCurrentGame(saveName);
+        }
+
+        private static void LogInfo(string message)
+        {
+            Log?.LogInfo(message);
+        }
+    }
+}
