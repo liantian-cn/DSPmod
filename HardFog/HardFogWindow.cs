@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.9")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.10")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -16,6 +16,7 @@ namespace HardFog
         private const string ClearCurrentStarKey = "clear_current_star";
         private const string FillGalaxyHivesKey = "fill_hive";
         private const string FogThreatDampenerKey = "fog-threat-dampener-enabled";
+        private const string SmartRelayDispatchKey = "smart-relay-dispatch-enabled";
         private const string ConstructLowLatitudeRuinsKey = "surface-ruins-construct-low-latitude";
         private const string ConstructMidLatitudeRuinsKey = "surface-ruins-construct-mid-latitude";
         private const string ConstructHighLatitudeRuinsKey = "surface-ruins-construct-high-latitude";
@@ -37,12 +38,14 @@ namespace HardFog
             DarkFogControl.Log = Logger;
             SurfaceRuinControl.Log = Logger;
             FogThreatDampenerControl.Init(Config.Bind("DarkFog", "FogThreatDampenerEnabled", false, "Enable Dark Fog Pressure Reducer. Reduces non-active hive threat by 1% every 30 hive ticks."), Logger);
+            SmartRelayDispatchControl.Init(Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Enable relay station dispatch only to markers."), Logger);
 
             I18N.Add(WindowTitleKey, "Dark Fog Control", "黑雾操控");
             I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog on current planet", "清理当前星球的黑雾");
             I18N.Add(ClearCurrentStarKey, "Clear space Dark Fog in current star system", "清理当前恒星的太空黑雾");
             I18N.Add(FillGalaxyHivesKey, "Fill the galaxy with Dark Fog hives", "为整个星系填满黑雾巢穴");
             I18N.Add(FogThreatDampenerKey, "Dark Fog Pressure Reducer", "黑雾降压器");
+            I18N.Add(SmartRelayDispatchKey, "Relay stations only dispatch to markers", "中继站只发往信标");
             I18N.Add(ConstructLowLatitudeRuinsKey, "Construct low-latitude ruins", "构造低纬度废墟");
             I18N.Add(ConstructMidLatitudeRuinsKey, "Construct mid-latitude ruins", "构造中纬度废墟");
             I18N.Add(ConstructHighLatitudeRuinsKey, "Construct high-latitude ruins", "构造高纬度废墟");
@@ -57,6 +60,7 @@ namespace HardFog
         {
             MyConfigWindow.OnUICreated -= CreateUI;
             FogThreatDampenerControl.Uninit();
+            SmartRelayDispatchControl.Uninit();
         }
 
         private static void CreateUI(MyConfigWindow wnd, RectTransform trans)
@@ -75,6 +79,8 @@ namespace HardFog
             fillGalaxyHivesButton = wnd.AddButton(x, y, 240, tab, FillGalaxyHivesKey, 16, "button-fill-galaxy-dark-fog-hives", OnFillGalaxyHivesClicked);
             y += 36f;
             wnd.AddCheckBox(x, y, tab, FogThreatDampenerControl.EnabledConfig, FogThreatDampenerKey, 16);
+            y += 36f;
+            wnd.AddCheckBox(x, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
             y += 36f;
             constructLowLatitudeRuinsButton = wnd.AddButton(x, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
             y += 36f;

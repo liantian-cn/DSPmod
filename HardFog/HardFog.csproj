@@ -307,6 +307,7 @@
     <Compile Include="DarkFogControl.cs" />
     <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="FogThreatDampenerControl.cs" />
+    <Compile Include="SmartRelayDispatchControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
