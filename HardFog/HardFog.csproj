@@ -303,7 +303,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HardFog.cs" />
+    <Compile Include="HardFogWindow.cs" />
+    <Compile Include="DarkFogControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
