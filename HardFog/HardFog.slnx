@@ -1,3 +1,6 @@
 <Solution>
-  <Project Path="HardFog.csproj" />
+  <Project Path="HardFog.csproj">
+    <BuildType Project="Release" />
+    <Build Solution="Debug|*" Project="false" />
+  </Project>
 </Solution>

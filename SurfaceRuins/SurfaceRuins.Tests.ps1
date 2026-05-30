@@ -5,6 +5,11 @@ $sourcePath = Join-Path $moduleRoot "SurfaceRuins.cs"
 $projectPath = Join-Path $moduleRoot "SurfaceRuins.csproj"
 $generatorPath = Join-Path $moduleRoot "generate_icosphere_ruin_positions.py"
 $csvPath = Join-Path $moduleRoot "generate_icosphere_ruin_positions.csv"
+$expectedPointCount = 120
+$expectedLowBandCount = 58
+$expectedMidBandCount = 30
+$expectedHighBandCount = 32
+$minimumRuinDistance = 52.0
 
 if (-not (Test-Path $sourcePath)) {
     throw "Missing source file: $sourcePath"
@@ -104,12 +109,12 @@ Assert-Contains $source 'prebuild\.parameters\[0\] = baseRuinId' "Geothermal pre
 Assert-Contains $source 'UIRealtimeTip\.Popup' "SurfaceRuins should report result through UIRealtimeTip."
 
 $pointCount = ([regex]::Matches($source, "new Vector3\(")).Count
-if ($pointCount -ne 162) {
-    throw "Expected 162 embedded ruin positions, found $pointCount."
+if ($pointCount -ne $expectedPointCount) {
+    throw "Expected $expectedPointCount embedded ruin positions, found $pointCount."
 }
 
 Assert-Contains $generator 'DEFAULT_RADIUS = 200\.2' "Ruin position generator must default to DSP orbit radius 200.2."
-Assert-Contains $generator 'DEFAULT_FREQUENCY = 4' "Ruin position generator must use frequency 4 for 162 icosphere vertices."
+Assert-Contains $generator 'DEFAULT_POINT_COUNT = 120' "Ruin position generator must default to 120 Fibonacci sphere points."
 Assert-Contains $generator 'DEFAULT_CSV_PATH = Path\(__file__\)\.with_suffix\("\.csv"\)' "Generator must default to a CSV sidecar path."
 Assert-Contains $generator 'ratio = max\(-1\.0, min\(1\.0, y / length\)\)' "Generator must compute latitude from the Y axis."
 Assert-Contains $generator 'latitude_deg' "Generator must compute latitude metadata."
@@ -117,6 +122,7 @@ Assert-Contains $generator 'band_for_latitude' "Generator must classify points i
 Assert-Contains $generator 'format_csharp_grouped_arrays' "Generator must emit the grouped C# arrays."
 Assert-Contains $generator 'write_csv' "Generator must export a CSV file."
 Assert-Contains $generator 'parser\.add_argument\("--csv"' "Generator must accept a CSV output path."
+Assert-Contains $generator 'parser\.add_argument\("--point-count"' "Generator must accept a point count argument."
 
 if (-not (Test-Path $csvPath)) {
     throw "Missing generated CSV file: $csvPath"
@@ -131,7 +137,12 @@ if ($csv[0] -ne 'index,x,y,z,latitude_deg,abs_latitude_deg,band') {
     throw "CSV header does not match the expected schema."
 }
 
+if (($csv.Count - 1) -ne $expectedPointCount) {
+    throw "Expected $expectedPointCount CSV data rows, found $($csv.Count - 1)."
+}
+
 $bandCounts = @{}
+$points = @()
 foreach ($line in $csv | Select-Object -Skip 1) {
     $parts = $line.Split(',')
     if ($parts.Count -ne 7) {
@@ -142,10 +153,27 @@ foreach ($line in $csv | Select-Object -Skip 1) {
         $bandCounts[$band] = 0
     }
     $bandCounts[$band]++
+    $points += [pscustomobject]@{
+        X = [double]::Parse($parts[1], [System.Globalization.CultureInfo]::InvariantCulture)
+        Y = [double]::Parse($parts[2], [System.Globalization.CultureInfo]::InvariantCulture)
+        Z = [double]::Parse($parts[3], [System.Globalization.CultureInfo]::InvariantCulture)
+    }
 }
 
-if ($bandCounts['low'] -ne 76 -or $bandCounts['mid'] -ne 48 -or $bandCounts['high'] -ne 38) {
+if ($bandCounts['low'] -ne $expectedLowBandCount -or $bandCounts['mid'] -ne $expectedMidBandCount -or $bandCounts['high'] -ne $expectedHighBandCount) {
     throw "Unexpected CSV band counts: low=$($bandCounts['low']) mid=$($bandCounts['mid']) high=$($bandCounts['high'])"
+}
+
+for ($i = 0; $i -lt $points.Count; $i++) {
+    for ($j = $i + 1; $j -lt $points.Count; $j++) {
+        $dx = $points[$i].X - $points[$j].X
+        $dy = $points[$i].Y - $points[$j].Y
+        $dz = $points[$i].Z - $points[$j].Z
+        $distance = [math]::Sqrt(($dx * $dx) + ($dy * $dy) + ($dz * $dz))
+        if ($distance -lt $minimumRuinDistance) {
+            throw "Generated ruin positions $i and $j are too close: distance=$distance"
+        }
+    }
 }
 
 Assert-Contains $source 'GetLatitudeBand' "SurfaceRuins must classify ruin positions by latitude."
