@@ -1,0 +1,7 @@
+{
+    "name": "HardFog",
+    "description": "Add some challenge and convenience to the Fog。为黑雾增加一些乐趣。",
+    "version_number": "0.0.6",
+    "website_url": "https://github.com/liantian-cn/DSPmod",
+    "dependencies": ["xiaoye97-BepInEx-5.4.17","soarqin-UXAssist-1.0.25"]
+}
