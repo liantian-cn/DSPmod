@@ -41,3 +41,9 @@ Prefer the narrowest verification that covers the change: run the module’s `.T
 Commit history uses short, prefixed messages such as `feat:`, `fix:`, and `chore:`. Follow that style and keep the subject specific.
 
 Pull requests should state which mod folders changed, what gameplay behavior moved, and how you verified it. Mention any dependency on a specific DSP game version or BepInEx reference set.
+
+## 第三方库
+
+- UXAssist是UI基座，第三方，不要修改。
+- Harmony是mod基座。
+- Assembly-CSharp是游戏源代码的dump
