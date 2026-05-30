@@ -13,11 +13,11 @@ namespace VeinPlacement
         private const string PluginGuid = "me.liantian.plugin.VeinPlacement";
         private const int ModSeedSalt = 0x56_50_30_31;
         private const float TargetLatitudeDegrees = 40f;
-        private const float TargetLongitudeDegrees = 90f;
+        private const float TargetLongitudeDegrees = 70f;
         private const float NormalGroupSpacing = 196f;
         private const float OilGroupSpacing = 100f;
-        private const float InnerVeinMinDistanceSqr = 0.6375f;
-        private const float InnerVeinMaxRadiusSqr = 15f;
+        private const float InnerVeinMinDistanceSqr = 0.5f;
+        private const float InnerVeinMaxRadiusSqr = 13f;
         private const int GroupPlacementAttempts = 12;
         private const int GroupPlacementRelaxPasses = 32;
         private const int LocalShapePasses = 20;
