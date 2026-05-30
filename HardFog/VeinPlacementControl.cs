@@ -12,7 +12,7 @@ namespace HardFog
     {
         private const string PatchGuid = "me.liantian.plugin.HardFog.VeinPlacement";
         private const int ModSeedSalt = 0x56_50_30_31;
-        private const float TargetLatitudeDegrees = 36f;
+        private const float TargetLatitudeDegrees = 40f;
         private const float TargetLongitudeDegrees = 80f;
         private const float NormalGroupSpacing = 196f;
         private const float OilGroupSpacing = 100f;
