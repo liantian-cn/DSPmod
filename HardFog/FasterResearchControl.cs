@@ -10,7 +10,7 @@ namespace HardFog
     internal static class FasterResearchControl
     {
         private const string PatchGuid = "me.liantian.plugin.HardFog.FasterResearch";
-        private const int Multiplier = 36;
+        private const int Multiplier = 48;
 
         internal static ConfigEntry<bool> EnabledConfig { get; private set; }
 
