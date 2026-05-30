@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.13")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.14")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {

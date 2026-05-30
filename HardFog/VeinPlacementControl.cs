@@ -18,8 +18,9 @@ namespace HardFog
         private const float OilGroupSpacing = 100f;
         private const float InnerVeinMinDistanceSqr = 0.5f;
         private const float InnerVeinMaxRadiusSqr = 13f;
-        private const int GroupPlacementAttempts = 12;
-        private const int GroupPlacementRelaxPasses = 32;
+        private const int GroupPlacementAttempts = 24;
+        private const int LongitudeExpansionPasses = 100;
+        private const float LongitudeExpansionStepDegrees = 30f;
         private const int LocalShapePasses = 20;
         private const int LocalFallbackAttempts = 8192;
 
@@ -103,17 +104,22 @@ namespace HardFog
             }
 
             DotNet35Random rng = CreateRandom(planet);
-            float initialLongitude = (float)(rng.NextDouble() * Math.PI * 2.0);
-            List<Vector3> centers = PlaceGroupCenters(planet, groups, initialLongitude, rng);
-            if (centers.Count != groups.Count)
+            Vector3 birthDirection = EnsureBirthPointDirection(planet);
+            if (birthDirection.sqrMagnitude < 0.5f)
             {
-                Log?.LogWarning($"Failed to place all vein groups on planet {planet.displayName ?? planet.name}");
+                Log?.LogWarning($"Unable to read birth point on planet {planet.displayName ?? planet.name}");
                 return;
             }
 
+            List<Vector3> centers = PlaceGroupCenters(planet, groups, birthDirection, rng);
             PlanetRawData data = planet.data;
             for (int i = 0; i < groups.Count; i++)
             {
+                if (centers[i].sqrMagnitude < 0.5f)
+                {
+                    continue;
+                }
+
                 RegenerateGroupVeins(planet, data, groups[i], centers[i], rng);
             }
 
@@ -153,6 +159,7 @@ namespace HardFog
         private static List<VeinGroupWork> CollectGroups(PlanetData planet)
         {
             Dictionary<short, VeinGroupWork> byGroup = new Dictionary<short, VeinGroupWork>();
+            List<VeinGroupWork> groups = new List<VeinGroupWork>();
             VeinData[] veinPool = planet.data.veinPool;
             int veinCursor = planet.data.veinCursor;
 
@@ -174,22 +181,12 @@ namespace HardFog
                 {
                     group = new VeinGroupWork(groupIndex, veinPool[i].type);
                     byGroup[groupIndex] = group;
+                    groups.Add(group);
                 }
 
                 group.VeinIds.Add(i);
             }
 
-            List<VeinGroupWork> groups = new List<VeinGroupWork>(byGroup.Values);
-            groups.Sort((a, b) =>
-            {
-                int typeCompare = a.Type.CompareTo(b.Type);
-                if (typeCompare != 0)
-                {
-                    return typeCompare;
-                }
-
-                return a.GroupIndex.CompareTo(b.GroupIndex);
-            });
             return groups;
         }
 
@@ -204,159 +201,162 @@ namespace HardFog
             }
         }
 
-        private static List<Vector3> PlaceGroupCenters(PlanetData planet, List<VeinGroupWork> groups, float initialLongitude, DotNet35Random rng)
+        private static Vector3 EnsureBirthPointDirection(PlanetData planet)
         {
-            List<Vector3> placed = new List<Vector3>(groups.Count);
-            Vector3 startPoint;
-            if (!TryFindStartPoint(planet, groups[0], initialLongitude, rng, placed, out startPoint))
+            if (planet.birthPoint.sqrMagnitude < 1E-08f)
             {
-                startPoint = FindAnyCenter(planet, groups[0], initialLongitude, rng, placed);
+                try
+                {
+                    planet.GenBirthPoints();
+                }
+                catch (Exception ex)
+                {
+                    Log?.LogWarning($"Unable to generate birth point on planet {planet.displayName ?? planet.name}: {ex.Message}");
+                }
             }
 
-            placed.Add(startPoint);
-            Vector3 anchor = startPoint;
+            if (planet.birthPoint.sqrMagnitude < 1E-08f)
+            {
+                return Vector3.zero;
+            }
+
+            return planet.birthPoint.normalized;
+        }
+
+        private static List<Vector3> PlaceGroupCenters(PlanetData planet, List<VeinGroupWork> groups, Vector3 birthDirection, DotNet35Random rng)
+        {
+            List<Vector3> centers = new List<Vector3>(groups.Count);
+            List<Vector3> placedCenters = new List<Vector3>(groups.Count);
+            if (groups.Count == 0)
+            {
+                return centers;
+            }
+
+            float centerLongitude = LongitudeFromDirection(birthDirection);
+            centers.Add(birthDirection);
+            placedCenters.Add(birthDirection);
+            Vector3 lastSuccessfulCenter = birthDirection;
 
             for (int i = 1; i < groups.Count; i++)
             {
                 Vector3 center;
-                if (!TryPlaceBranchCenter(planet, groups[i], initialLongitude, rng, placed, anchor, out center))
+                if (TryPlaceGroupCenter(planet, groups[i], lastSuccessfulCenter, centerLongitude, rng, placedCenters, out center))
                 {
-                    if (!TryPlaceBranchCenter(planet, groups[i], initialLongitude, rng, placed, startPoint, out center))
-                    {
-                        if (!TryFindStartPoint(planet, groups[i], initialLongitude, rng, placed, out center))
-                        {
-                            center = FindAnyCenter(planet, groups[i], initialLongitude, rng, placed);
-                        }
-
-                        startPoint = center;
-                    }
-                }
-
-                placed.Add(center);
-                anchor = center;
-            }
-
-            return new List<Vector3>(placed);
-        }
-
-        private static bool TryFindStartPoint(PlanetData planet, VeinGroupWork group, float initialLongitude, DotNet35Random rng, List<Vector3> placed, out Vector3 center)
-        {
-            float num = 2.1f / planet.radius;
-            float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
-            float minDistanceSqr = num * num * spacing;
-
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-            {
-                Vector3 candidate = RandomDirectionInTargetWindow(initialLongitude, rng);
-                if (IsValidCenter(candidate, placed, minDistanceSqr))
-                {
-                    center = candidate.normalized;
-                    return true;
-                }
-            }
-
-            center = Vector3.up;
-            return false;
-        }
-
-        private static bool TryPlaceBranchCenter(PlanetData planet, VeinGroupWork group, float initialLongitude, DotNet35Random rng, List<Vector3> placed, Vector3 anchor, out Vector3 center)
-        {
-            float num = 2.1f / planet.radius;
-            float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
-            float minDistanceSqr = num * num * spacing;
-
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-            {
-                Vector3 candidate;
-                if (!TryRandomDirectionBetween(anchor, rng, minDistanceSqr, 2f, initialLongitude, out candidate))
-                {
+                    centers.Add(center);
+                    placedCenters.Add(center);
+                    lastSuccessfulCenter = center;
                     continue;
                 }
 
-                bool tooClose = false;
-                for (int i = 0; i < placed.Count; i++)
+                centers.Add(Vector3.zero);
+                Vector3 originalCenter = GetOriginalGroupCenter(planet, groups[i]);
+                if (originalCenter.sqrMagnitude > 0.5f)
                 {
-                    if ((placed[i] - candidate).sqrMagnitude < minDistanceSqr)
-                    {
-                        tooClose = true;
-                        break;
-                    }
+                    placedCenters.Add(originalCenter);
                 }
+            }
 
-                if (!tooClose)
+            return centers;
+        }
+
+        private static bool TryPlaceGroupCenter(PlanetData planet, VeinGroupWork group, Vector3 anchor, float centerLongitude, DotNet35Random rng, List<Vector3> placedCenters, out Vector3 center)
+        {
+            float minDistanceSqr = GetMinDistanceSqr(planet, group);
+            float minDistance = Mathf.Sqrt(minDistanceSqr);
+
+            for (int band = 1; band <= 3; band++)
+            {
+                if (TryPlaceOnDistanceBand(anchor, minDistance * band, minDistance * (band + 1), centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
+                {
+                    return true;
+                }
+            }
+
+            if (TryPlaceRandomInWindow(centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
+            {
+                return true;
+            }
+
+            for (int pass = 1; pass <= LongitudeExpansionPasses; pass++)
+            {
+                float longitudeHalfWidth = TargetLongitudeDegrees + LongitudeExpansionStepDegrees * pass;
+                if (TryPlaceRandomInWindow(centerLongitude, longitudeHalfWidth, rng, placedCenters, minDistanceSqr, out center))
+                {
+                    return true;
+                }
+            }
+
+            center = Vector3.zero;
+            return false;
+        }
+
+        private static bool TryPlaceOnDistanceBand(Vector3 anchor, float minDistance, float maxDistance, float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
+        {
+            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
+            {
+                float distance = minDistance + (float)rng.NextDouble() * (maxDistance - minDistance);
+                float angle = (float)(rng.NextDouble() * Math.PI * 2.0);
+                Vector3 candidate = DirectionAtChordDistance(anchor, distance, angle);
+                if (IsValidCandidate(candidate, centerLongitude, longitudeHalfWidthDegrees, placedCenters, minDistanceSqr))
+                {
+                    center = candidate;
+                    return true;
+                }
+            }
+
+            center = Vector3.zero;
+            return false;
+        }
+
+        private static bool TryPlaceRandomInWindow(float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
+        {
+            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
+            {
+                Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, longitudeHalfWidthDegrees, rng);
+                if (IsValidCenter(candidate, placedCenters, minDistanceSqr))
                 {
                     center = candidate.normalized;
                     return true;
                 }
             }
 
-            center = Vector3.up;
+            center = Vector3.zero;
             return false;
         }
 
-        private static Vector3 FindAnyCenter(PlanetData planet, VeinGroupWork group, float centerLongitude, DotNet35Random rng, List<Vector3> placed)
-        {
-            float num = 2.1f / planet.radius;
-            float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
-            float minDistanceSqr = num * num * spacing;
-
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-            {
-                Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
-                if (IsValidCenter(candidate, placed, minDistanceSqr))
-                {
-                    return candidate.normalized;
-                }
-            }
-
-            float spacingScale = 1f;
-            for (int relax = 0; relax < GroupPlacementRelaxPasses; relax++)
-            {
-                float relaxedMinDistanceSqr = minDistanceSqr * spacingScale;
-                for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
-                {
-                    Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
-                    if (IsValidCenter(candidate, placed, relaxedMinDistanceSqr))
-                    {
-                        return candidate.normalized;
-                    }
-                }
-
-                spacingScale *= 0.85f;
-            }
-
-            return RandomDirectionInTargetWindow(centerLongitude, rng).normalized;
-        }
-
-        private static Vector3 RandomDirectionInTargetWindow(float centerLongitude, DotNet35Random rng)
+        private static Vector3 RandomDirectionInTargetWindow(float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng)
         {
             float lat = Deg2Rad((float)((rng.NextDouble() * 2.0 - 1.0) * TargetLatitudeDegrees));
-            float lon = centerLongitude + Deg2Rad((float)((rng.NextDouble() * 2.0 - 1.0) * TargetLongitudeDegrees));
+            float lon = centerLongitude + Deg2Rad((float)((rng.NextDouble() * 2.0 - 1.0) * longitudeHalfWidthDegrees));
             return DirectionFromLatLon(lat, lon);
         }
 
-        private static bool TryRandomDirectionBetween(Vector3 anchor, DotNet35Random rng, float minDistanceSqr, float maxDistanceScale, float centerLongitude, out Vector3 candidate)
+        private static bool IsValidCandidate(Vector3 candidate, float centerLongitude, float longitudeHalfWidthDegrees, List<Vector3> placedCenters, float minDistanceSqr)
         {
-            for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
+            if (!IsInTargetWindow(candidate, centerLongitude, longitudeHalfWidthDegrees))
             {
-                candidate = RandomDirectionInTargetWindow(centerLongitude, rng);
-                float distanceSqr = (candidate - anchor).sqrMagnitude;
-                if (distanceSqr > minDistanceSqr && distanceSqr <= minDistanceSqr * maxDistanceScale)
-                {
-                    candidate = candidate.normalized;
-                    return true;
-                }
+                return false;
             }
 
-            candidate = Vector3.zero;
-            return false;
+            return IsValidCenter(candidate, placedCenters, minDistanceSqr);
         }
 
-        private static bool IsValidCenter(Vector3 candidate, List<Vector3> placed, float minDistanceSqr)
+        private static bool IsInTargetWindow(Vector3 candidate, float centerLongitude, float longitudeHalfWidthDegrees)
         {
-            for (int i = 0; i < placed.Count; i++)
+            Vector3 direction = candidate.normalized;
+            if (Mathf.Abs(LatitudeFromDirection(direction)) > Deg2Rad(TargetLatitudeDegrees))
             {
-                if ((placed[i] - candidate).sqrMagnitude < minDistanceSqr)
+                return false;
+            }
+
+            return AbsLongitudeDelta(LongitudeFromDirection(direction), centerLongitude) <= Deg2Rad(longitudeHalfWidthDegrees);
+        }
+
+        private static bool IsValidCenter(Vector3 candidate, List<Vector3> placedCenters, float minDistanceSqr)
+        {
+            for (int i = 0; i < placedCenters.Count; i++)
+            {
+                if ((placedCenters[i] - candidate).sqrMagnitude < minDistanceSqr)
                 {
                     return false;
                 }
@@ -365,10 +365,80 @@ namespace HardFog
             return true;
         }
 
+        private static float GetMinDistanceSqr(PlanetData planet, VeinGroupWork group)
+        {
+            float scale = 2.1f / planet.radius;
+            float spacing = group.Type == EVeinType.Oil ? OilGroupSpacing : NormalGroupSpacing;
+            return scale * scale * spacing;
+        }
+
+        private static Vector3 DirectionAtChordDistance(Vector3 anchor, float chordDistance, float angle)
+        {
+            Vector3 normalizedAnchor = anchor.normalized;
+            Vector3 tangentA = Vector3.Cross(normalizedAnchor, Vector3.up);
+            if (tangentA.sqrMagnitude < 1E-08f)
+            {
+                tangentA = Vector3.Cross(normalizedAnchor, Vector3.right);
+            }
+
+            tangentA.Normalize();
+            Vector3 tangentB = Vector3.Cross(normalizedAnchor, tangentA).normalized;
+            Vector3 tangentDirection = Mathf.Cos(angle) * tangentA + Mathf.Sin(angle) * tangentB;
+            float theta = 2f * Mathf.Asin(Mathf.Clamp(chordDistance * 0.5f, 0f, 0.999999f));
+            return (Mathf.Cos(theta) * normalizedAnchor + Mathf.Sin(theta) * tangentDirection).normalized;
+        }
+
+        private static Vector3 GetOriginalGroupCenter(PlanetData planet, VeinGroupWork group)
+        {
+            Vector3 center = Vector3.zero;
+            VeinData[] veinPool = planet.data.veinPool;
+            for (int i = 0; i < group.VeinIds.Count; i++)
+            {
+                Vector3 pos = veinPool[group.VeinIds[i]].pos;
+                if (pos.sqrMagnitude > 1E-08f)
+                {
+                    center += pos.normalized;
+                }
+            }
+
+            if (center.sqrMagnitude < 1E-08f)
+            {
+                return Vector3.zero;
+            }
+
+            return center.normalized;
+        }
+
         private static Vector3 DirectionFromLatLon(float latitude, float longitude)
         {
             float cosLat = Mathf.Cos(latitude);
             return new Vector3(Mathf.Cos(longitude) * cosLat, Mathf.Sin(latitude), Mathf.Sin(longitude) * cosLat).normalized;
+        }
+
+        private static float LongitudeFromDirection(Vector3 direction)
+        {
+            return Mathf.Atan2(direction.z, direction.x);
+        }
+
+        private static float LatitudeFromDirection(Vector3 direction)
+        {
+            return Mathf.Asin(Mathf.Clamp(direction.y, -1f, 1f));
+        }
+
+        private static float AbsLongitudeDelta(float longitude, float centerLongitude)
+        {
+            float delta = longitude - centerLongitude;
+            while (delta > Mathf.PI)
+            {
+                delta -= Mathf.PI * 2f;
+            }
+
+            while (delta < -Mathf.PI)
+            {
+                delta += Mathf.PI * 2f;
+            }
+
+            return Mathf.Abs(delta);
         }
 
         private static float Deg2Rad(float degrees)
