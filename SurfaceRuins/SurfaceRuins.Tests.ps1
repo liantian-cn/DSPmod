@@ -124,6 +124,30 @@ Assert-Contains $generator 'write_csv' "Generator must export a CSV file."
 Assert-Contains $generator 'parser\.add_argument\("--csv"' "Generator must accept a CSV output path."
 Assert-Contains $generator 'parser\.add_argument\("--point-count"' "Generator must accept a point count argument."
 
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "SurfaceRuinsTests-$([guid]::NewGuid().ToString('N'))"
+New-Item -ItemType Directory -Path $tempRoot | Out-Null
+try {
+    $tempSourcePath = Join-Path $tempRoot "SurfaceRuins.cs"
+    $tempCsvPath = Join-Path $tempRoot "generate_icosphere_ruin_positions.csv"
+    $crlfSource = $source -replace "`r?`n", "`r`n"
+    $utf8NoBom = New-Object System.Text.UTF8Encoding -ArgumentList $false
+    [System.IO.File]::WriteAllText($tempSourcePath, $crlfSource, $utf8NoBom)
+
+    $generatorOutput = & python $generatorPath --write $tempSourcePath --csv $tempCsvPath 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Generator failed to rewrite CRLF SurfaceRuins.cs: $($generatorOutput -join [Environment]::NewLine)"
+    }
+
+    $generatedSource = Get-Content -Raw -Encoding UTF8 $tempSourcePath
+    $generatedPointCount = ([regex]::Matches($generatedSource, "new Vector3\(")).Count
+    if ($generatedPointCount -ne $expectedPointCount) {
+        throw "Generator wrote $generatedPointCount embedded ruin positions to CRLF source, expected $expectedPointCount."
+    }
+}
+finally {
+    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 if (-not (Test-Path $csvPath)) {
     throw "Missing generated CSV file: $csvPath"
 }

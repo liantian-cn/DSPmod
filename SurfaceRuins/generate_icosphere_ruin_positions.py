@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate symmetric icosphere ruin positions for SurfaceRuins.cs."""
+"""Generate deterministic sphere ruin positions for SurfaceRuins.cs."""
 
 from __future__ import annotations
 
@@ -12,10 +12,11 @@ from pathlib import Path
 
 
 DEFAULT_RADIUS = 200.2
-DEFAULT_FREQUENCY = 4
+DEFAULT_POINT_COUNT = 120
 DEFAULT_CSV_PATH = Path(__file__).with_suffix(".csv")
 LOW_LATITUDE_MAX = 28.5
 MID_LATITUDE_MAX = 46.5
+GOLDEN_ANGLE = math.pi * (3.0 - math.sqrt(5.0))
 
 
 @dataclass(frozen=True)
@@ -60,71 +61,23 @@ def band_for_latitude(abs_latitude_deg: float) -> str:
     return "high"
 
 
-def base_icosahedron() -> tuple[list[tuple[float, float, float]], list[tuple[int, int, int]]]:
-    phi = (1.0 + math.sqrt(5.0)) / 2.0
-    vertices = [
-        (-1.0, phi, 0.0),
-        (1.0, phi, 0.0),
-        (-1.0, -phi, 0.0),
-        (1.0, -phi, 0.0),
-        (0.0, -1.0, phi),
-        (0.0, 1.0, phi),
-        (0.0, -1.0, -phi),
-        (0.0, 1.0, -phi),
-        (phi, 0.0, -1.0),
-        (phi, 0.0, 1.0),
-        (-phi, 0.0, -1.0),
-        (-phi, 0.0, 1.0),
-    ]
-    faces = [
-        (0, 11, 5),
-        (0, 5, 1),
-        (0, 1, 7),
-        (0, 7, 10),
-        (0, 10, 11),
-        (1, 5, 9),
-        (5, 11, 4),
-        (11, 10, 2),
-        (10, 7, 6),
-        (7, 1, 8),
-        (3, 9, 4),
-        (3, 4, 2),
-        (3, 2, 6),
-        (3, 6, 8),
-        (3, 8, 9),
-        (4, 9, 5),
-        (2, 4, 11),
-        (6, 2, 10),
-        (8, 6, 7),
-        (9, 8, 1),
-    ]
-    return vertices, faces
+def generate_points(point_count: int, radius: float) -> list[RuinPoint]:
+    if point_count < 1:
+        raise ValueError("point_count must be at least 1")
 
+    points: list[tuple[float, float, float]] = []
+    for i in range(point_count):
+        y = 1.0 - (2.0 * (i + 0.5) / point_count)
+        radial = math.sqrt(max(0.0, 1.0 - y * y))
+        theta = i * GOLDEN_ANGLE
+        point = (
+            math.cos(theta) * radial,
+            y,
+            math.sin(theta) * radial,
+        )
+        points.append(scaled(point, radius))
 
-def generate_points(frequency: int, radius: float) -> list[RuinPoint]:
-    if frequency < 1:
-        raise ValueError("frequency must be at least 1")
-
-    vertices, faces = base_icosahedron()
-    points: dict[tuple[float, float, float], tuple[float, float, float]] = {}
-
-    for a_index, b_index, c_index in faces:
-        ax, ay, az = vertices[a_index]
-        bx, by, bz = vertices[b_index]
-        cx, cy, cz = vertices[c_index]
-        for i in range(frequency + 1):
-            for j in range(frequency + 1 - i):
-                k = frequency - i - j
-                point = (
-                    (ax * i + bx * j + cx * k) / frequency,
-                    (ay * i + by * j + cy * k) / frequency,
-                    (az * i + bz * j + cz * k) / frequency,
-                )
-                unit = normalize(point)
-                key = tuple(round(value, 12) for value in unit)
-                points[key] = scaled(point, radius)
-
-    ordered_points = sorted(points.values(), key=lambda p: (-p[2], math.atan2(p[1], p[0]), p[0]))
+    ordered_points = sorted(points, key=lambda p: (-p[2], math.atan2(p[1], p[0]), p[0]))
     records: list[RuinPoint] = []
     for index, (x, y, z) in enumerate(ordered_points):
         latitude = latitude_degrees((x, y, z))
@@ -232,18 +185,18 @@ def write_csv(csv_path: Path, points: list[RuinPoint]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--radius", type=float, default=DEFAULT_RADIUS)
-    parser.add_argument("--frequency", type=int, default=DEFAULT_FREQUENCY)
+    parser.add_argument("--point-count", type=int, default=DEFAULT_POINT_COUNT)
     parser.add_argument("--write", type=Path, help="Replace RuinPositions in the given C# file.")
     parser.add_argument("--csv", type=Path, default=DEFAULT_CSV_PATH, help="Write a CSV sidecar with latitude bands.")
     args = parser.parse_args()
 
-    points = generate_points(args.frequency, args.radius)
+    points = generate_points(args.point_count, args.radius)
     points_text = format_csharp_points(points)
 
     if args.write:
         source_bytes = args.write.read_bytes()
         newline = "\r\n" if b"\r\n" in source_bytes else "\n"
-        source = source_bytes.decode("utf-8")
+        source = source_bytes.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
         updated = replace_ruin_positions(source, format_csharp_grouped_arrays(points))
         args.write.write_text(updated.replace("\n", newline), encoding="utf-8", newline="")
     else:
