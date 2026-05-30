@@ -44,6 +44,33 @@ Assert-True ($source -match "planetFactory\.KillEnemyFinally\s*\(\s*i\s*,\s*ref\
 Assert-True ($source -notmatch "KillEnemyFinally\s*\(\s*player\s*,") "HardFog must not call the removed PlanetFactory.KillEnemyFinally(Player, int, ref CombatStat) overload."
 Assert-True ($source -match 'BepInPlugin\("me\.liantian\.plugin\.HardFog",\s*"HardFog",\s*"0\.0\.7"\)') "HardFog compatibility build should publish as version 0.0.7."
 
+$expectedButtonKeys = @("clear_current_planet", "clear_current_star", "fill_hive")
+Assert-True (([regex]::Matches($source, 'wnd\.AddButton\(').Count) -eq 3) "HardFog UI must expose exactly three buttons."
+foreach ($key in $expectedButtonKeys) {
+    Assert-True ($source -match "wnd\.AddButton\([^;]*`"$([regex]::Escape($key))`"") "HardFog UI must keep the '$key' button."
+    Assert-True ($source -match "I18N\.Add\(\s*`"$([regex]::Escape($key))`"") "HardFog must keep the '$key' translation."
+}
+
+$removedFeatureTokens = @(
+    "ConfigEntry",
+    "Harmony",
+    "MyCheckBox",
+    "MoreFrequentRelays",
+    "StarResetHive",
+    "StarFillHive",
+    "ClearAllVein",
+    "BatchAddVein",
+    "AddVein",
+    "AddRuins",
+    "GeneratePoints",
+    "Clear all vein",
+    "add-vein",
+    "add-ruins"
+)
+foreach ($token in $removedFeatureTokens) {
+    Assert-True ($source -notmatch [regex]::Escape($token)) "HardFog must remove redundant feature token '$token'."
+}
+
 $projectBuildOutput = dotnet build $projectPath -c Release -t:Rebuild 2>&1
 $projectBuildOutput | Write-Host
 if ($LASTEXITCODE -ne 0) {
