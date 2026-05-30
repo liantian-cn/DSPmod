@@ -1,0 +1,10 @@
+{
+    "name": "HardFog",
+    "description": "Dark Fog controls and merged convenience toggles for Dyson Sphere Program.",
+    "version_number": "0.0.13",
+    "website_url": "https://github.com/liantian-cn/DSPmod",
+    "dependencies": [
+        "xiaoye97-BepInEx-5.4.17",
+        "soarqin-UXAssist-1.4.0"
+    ]
+}
