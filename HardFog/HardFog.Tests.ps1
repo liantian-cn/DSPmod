@@ -30,6 +30,11 @@ Assert-SourceContains "Dictionary<EVeinType, List<VeinGroupWork>> byType" "Vein 
 Assert-SourceContains "for (int round = 0; round < largestTypeGroupCount; round++)" "Vein group interleaving should place one group from each type per round."
 Assert-SourceContains "if (round < typeGroups[i].Count)" "Vein group interleaving should skip vein types that do not have a group for the current round."
 Assert-SourceNotContains "groups.Sort(" "Vein groups should not be block-sorted by vein type."
+Assert-SourceContains "private static bool IsWaterAllowedVeinGroup(VeinGroupWork group)" "Vein placement should centralize water-allowed vein type checks."
+Assert-SourceContains "group.Type == EVeinType.Oil || group.Type == EVeinType.Bamboo" "Only oil and spiniform stalagmite vein groups should be allowed to use water candidates."
+Assert-SourceContains "private static bool IsValidTerrainCandidate(PlanetData planet, VeinGroupWork group, Vector3 candidate)" "Vein placement should validate candidate terrain before accepting a group center."
+Assert-SourceContains "planet.data.QueryHeight(candidate) >= planet.radius" "Non-water vein groups should reject candidate centers below the planet water radius."
+Assert-SourceContains "IsValidTerrainCandidate(planet, group, candidate)" "Vein placement should skip water candidates before accepting a group center."
 Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a random target longitude."
 
 $buildOutput = dotnet build $solutionPath -t:Rebuild 2>&1

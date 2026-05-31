@@ -305,13 +305,13 @@ namespace HardFog
 
             for (int band = 1; band <= 3; band++)
             {
-                if (TryPlaceOnDistanceBand(anchor, minDistance * band, minDistance * (band + 1), centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
+                if (TryPlaceOnDistanceBand(planet, group, anchor, minDistance * band, minDistance * (band + 1), centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
                 {
                     return true;
                 }
             }
 
-            if (TryPlaceRandomInWindow(centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
+            if (TryPlaceRandomInWindow(planet, group, centerLongitude, TargetLongitudeDegrees, rng, placedCenters, minDistanceSqr, out center))
             {
                 return true;
             }
@@ -319,7 +319,7 @@ namespace HardFog
             for (int pass = 1; pass <= LongitudeExpansionPasses; pass++)
             {
                 float longitudeHalfWidth = TargetLongitudeDegrees + LongitudeExpansionStepDegrees * pass;
-                if (TryPlaceRandomInWindow(centerLongitude, longitudeHalfWidth, rng, placedCenters, minDistanceSqr, out center))
+                if (TryPlaceRandomInWindow(planet, group, centerLongitude, longitudeHalfWidth, rng, placedCenters, minDistanceSqr, out center))
                 {
                     return true;
                 }
@@ -329,14 +329,14 @@ namespace HardFog
             return false;
         }
 
-        private static bool TryPlaceOnDistanceBand(Vector3 anchor, float minDistance, float maxDistance, float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
+        private static bool TryPlaceOnDistanceBand(PlanetData planet, VeinGroupWork group, Vector3 anchor, float minDistance, float maxDistance, float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
         {
             for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
             {
                 float distance = minDistance + (float)rng.NextDouble() * (maxDistance - minDistance);
                 float angle = (float)(rng.NextDouble() * Math.PI * 2.0);
                 Vector3 candidate = DirectionAtChordDistance(anchor, distance, angle);
-                if (IsValidCandidate(candidate, centerLongitude, longitudeHalfWidthDegrees, placedCenters, minDistanceSqr))
+                if (IsValidCandidate(planet, group, candidate, centerLongitude, longitudeHalfWidthDegrees, placedCenters, minDistanceSqr))
                 {
                     center = candidate;
                     return true;
@@ -347,12 +347,12 @@ namespace HardFog
             return false;
         }
 
-        private static bool TryPlaceRandomInWindow(float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
+        private static bool TryPlaceRandomInWindow(PlanetData planet, VeinGroupWork group, float centerLongitude, float longitudeHalfWidthDegrees, DotNet35Random rng, List<Vector3> placedCenters, float minDistanceSqr, out Vector3 center)
         {
             for (int attempt = 0; attempt < GroupPlacementAttempts; attempt++)
             {
                 Vector3 candidate = RandomDirectionInTargetWindow(centerLongitude, longitudeHalfWidthDegrees, rng);
-                if (IsValidCenter(candidate, placedCenters, minDistanceSqr))
+                if (IsValidCenter(planet, group, candidate, placedCenters, minDistanceSqr))
                 {
                     center = candidate.normalized;
                     return true;
@@ -370,14 +370,14 @@ namespace HardFog
             return DirectionFromLatLon(lat, lon);
         }
 
-        private static bool IsValidCandidate(Vector3 candidate, float centerLongitude, float longitudeHalfWidthDegrees, List<Vector3> placedCenters, float minDistanceSqr)
+        private static bool IsValidCandidate(PlanetData planet, VeinGroupWork group, Vector3 candidate, float centerLongitude, float longitudeHalfWidthDegrees, List<Vector3> placedCenters, float minDistanceSqr)
         {
             if (!IsInTargetWindow(candidate, centerLongitude, longitudeHalfWidthDegrees))
             {
                 return false;
             }
 
-            return IsValidCenter(candidate, placedCenters, minDistanceSqr);
+            return IsValidCenter(planet, group, candidate, placedCenters, minDistanceSqr);
         }
 
         private static bool IsInTargetWindow(Vector3 candidate, float centerLongitude, float longitudeHalfWidthDegrees)
@@ -391,8 +391,13 @@ namespace HardFog
             return AbsLongitudeDelta(LongitudeFromDirection(direction), centerLongitude) <= Deg2Rad(longitudeHalfWidthDegrees);
         }
 
-        private static bool IsValidCenter(Vector3 candidate, List<Vector3> placedCenters, float minDistanceSqr)
+        private static bool IsValidCenter(PlanetData planet, VeinGroupWork group, Vector3 candidate, List<Vector3> placedCenters, float minDistanceSqr)
         {
+            if (!IsValidTerrainCandidate(planet, group, candidate))
+            {
+                return false;
+            }
+
             for (int i = 0; i < placedCenters.Count; i++)
             {
                 if ((placedCenters[i] - candidate).sqrMagnitude < minDistanceSqr)
@@ -402,6 +407,21 @@ namespace HardFog
             }
 
             return true;
+        }
+
+        private static bool IsValidTerrainCandidate(PlanetData planet, VeinGroupWork group, Vector3 candidate)
+        {
+            if (IsWaterAllowedVeinGroup(group))
+            {
+                return true;
+            }
+
+            return planet.data.QueryHeight(candidate) >= planet.radius;
+        }
+
+        private static bool IsWaterAllowedVeinGroup(VeinGroupWork group)
+        {
+            return group.Type == EVeinType.Oil || group.Type == EVeinType.Bamboo;
         }
 
         private static float GetMinDistanceSqr(PlanetData planet, VeinGroupWork group)
