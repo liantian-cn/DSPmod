@@ -27,6 +27,12 @@ function Assert-TextContains([string]$source, [string]$needle, [string]$message)
     }
 }
 
+function Assert-TextNotContains([string]$source, [string]$needle, [string]$message) {
+    if ($source.Contains($needle)) {
+        throw $message
+    }
+}
+
 function Assert-SourceNotContains([string]$needle, [string]$message) {
     if ($veinPlacementSource.Contains($needle)) {
         throw $message
@@ -54,26 +60,29 @@ Assert-SourceContains "IsValidTerrainCandidate(planet, group, candidate)" "Vein 
 Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a random target longitude."
 
 Assert-TextContains $projectSource 'Compile Include="BuildAnywhereOnWaterControl.cs"' "Build-anywhere-on-water control should be compiled into HardFog."
-Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.15")]' "HardFog plugin version should be 0.0.15."
+Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.16")]' "HardFog plugin version should be 0.0.16."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true' "Water-build feature should default on in HardFog config."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Uninit();' "Water-build feature should be uninitialized with other controls."
 Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
-Assert-TextContains $manifestSource '"version_number": "0.0.15"' "Package manifest version should match the plugin version."
-Assert-TextContains $readmeSource 'Build anywhere on liquid oceans' "Package README should document the water-build feature."
+Assert-TextContains $manifestSource '"version_number": "0.0.16"' "Package manifest version should match the plugin version."
+Assert-TextContains $readmeSource 'Ignore ground support requirement' "Package README should document the ground-support override feature."
 
-Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(VFPreload), "InvokeOnLoadWorkEnded")]' "Water-build control should reapply prefab overrides after game preload completes."
-Assert-TextContains $waterBuildSource 'ThemeProto[] themes = LDB.themes.dataArray;' "Water-build control should gather water types from theme data."
-Assert-TextContains $waterBuildSource 'theme.WaterItemId > 0' "Water-build control should include every positive theme liquid item id."
-Assert-TextContains $waterBuildSource 'desc.allowBuildInWater = true;' "Water-build control should make eligible prefabs buildable in water."
-Assert-TextContains $waterBuildSource 'desc.needBuildInWaterTech = false;' "Water-build control should bypass per-building water tech requirements."
-Assert-TextContains $waterBuildSource 'desc.waterTypes = waterTypes;' "Water-build control should assign all known liquid ocean item ids."
-Assert-TextContains $waterBuildSource 'RestoreOriginals();' "Water-build control should restore original prefab values when disabled."
-Assert-TextContains $waterBuildSource 'desc.waterPoints.Length > 0' "Water-build control should not alter water-resource-specific buildings."
-Assert-TextContains $waterBuildSource 'desc.minerType != EMinerType.None' "Water-build control should not alter miners."
-Assert-TextContains $waterBuildSource 'desc.veinMiner || desc.oilMiner' "Water-build control should not alter vein or oil miners."
-Assert-TextContains $waterBuildSource 'desc.geothermal' "Water-build control should not alter geothermal placement rules."
-Assert-TextContains $waterBuildSource 'desc.isInserter' "Water-build control should not alter inserter connection rules."
-Assert-TextContains $waterBuildSource 'desc.addonType != EAddonType.None && !desc.isBelt && !desc.isTurret' "Water-build control should preserve non-belt addon placement rules."
+Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]' "Water-build control should patch manual build condition checks."
+Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]' "Water-build control should patch blueprint paste condition checks."
+Assert-TextContains $waterBuildSource 'private static void BuildToolClickCheckBuildConditionsPostfix(BuildTool_Click __instance, ref bool __result)' "Manual build patch should be a postfix that can update the build result."
+Assert-TextContains $waterBuildSource 'private static void BuildToolBlueprintPasteCheckBuildConditionsPostfix(BuildTool_BlueprintPaste __instance, ref bool __result)' "Blueprint build patch should be a postfix that can update the build result."
+Assert-TextContains $waterBuildSource 'bp.condition == EBuildCondition.NeedGround' "Water-build control should specifically clear NeedGround conditions."
+Assert-TextContains $waterBuildSource 'bp.condition = EBuildCondition.Ok;' "Water-build control should treat NeedGround as buildable."
+Assert-TextContains $waterBuildSource 'RemoveClearedBlueprintErrors(__instance' "Water-build control should remove stale blueprint errors after clearing NeedGround."
+Assert-TextContains $waterBuildSource 'RemoveConditionErrorBuildings(tool, EBuildCondition.NeedGround)' "Water-build control should remove raw NeedGround blueprint error tips."
+Assert-TextContains $waterBuildSource 'tool._tmpErrorTipsCursor' "Water-build control should keep the blueprint error tip cursor consistent."
+Assert-TextContains $waterBuildSource 'BuildPreview.GetConditionText(EBuildCondition.Ok)' "Manual build cursor text should be refreshed after clearing NeedGround."
+Assert-TextContains $waterBuildSource 'RefreshManualCursor(__instance, __result)' "Manual build cursor should be refreshed after recomputing the result."
+Assert-TextContains $waterBuildSource 'bp.condition == EBuildCondition.ConnWithErrorBuilding' "Blueprint connection errors caused by cleared NeedGround previews should be rechecked."
+Assert-TextContains $waterBuildSource 'IsBlueprintAllowedCondition' "Blueprint result recomputation should preserve original allowed conditions."
+Assert-TextNotContains $waterBuildSource 'desc.allowBuildInWater = true;' "Water-build control should no longer mutate PrefabDesc water support flags."
+Assert-TextNotContains $waterBuildSource 'ThemeProto[] themes = LDB.themes.dataArray;' "Water-build control should no longer depend on theme water type data."
+Assert-TextNotContains $waterBuildSource '[HarmonyPatch(typeof(VFPreload), "InvokeOnLoadWorkEnded")]' "Water-build control should no longer patch preload for PrefabDesc overrides."
 
 $buildOutput = dotnet build $solutionPath -t:Rebuild 2>&1
 $buildOutput | Write-Host
