@@ -25,7 +25,11 @@ Assert-SourceContains "float centerLongitude = LongitudeFromDirection(birthDirec
 Assert-SourceContains "placedCenters.Add(birthDirection);" "The first vein group should be placed at birthPoint."
 Assert-SourceContains "lastSuccessfulCenter" "Failed group placement should keep later groups anchored to the last successful center."
 Assert-SourceContains "GetOriginalGroupCenter" "Failed group placement should preserve and block against the original group center."
-Assert-SourceNotContains "groups.Sort(" "Vein groups should keep generation order instead of sorting by vein type."
+Assert-SourceContains "List<VeinGroupWork> groups = InterleaveGroupsByType(CollectGroups(planet));" "Vein groups should be interleaved by vein type before placement."
+Assert-SourceContains "Dictionary<EVeinType, List<VeinGroupWork>> byType" "Vein group interleaving should bucket groups by vein type."
+Assert-SourceContains "for (int round = 0; round < largestTypeGroupCount; round++)" "Vein group interleaving should place one group from each type per round."
+Assert-SourceContains "if (round < typeGroups[i].Count)" "Vein group interleaving should skip vein types that do not have a group for the current round."
+Assert-SourceNotContains "groups.Sort(" "Vein groups should not be block-sorted by vein type."
 Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a random target longitude."
 
 $buildOutput = dotnet build $solutionPath -t:Rebuild 2>&1

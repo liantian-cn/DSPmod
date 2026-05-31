@@ -97,7 +97,7 @@ namespace HardFog
                 return;
             }
 
-            List<VeinGroupWork> groups = CollectGroups(planet);
+            List<VeinGroupWork> groups = InterleaveGroupsByType(CollectGroups(planet));
             if (groups.Count == 0)
             {
                 return;
@@ -188,6 +188,45 @@ namespace HardFog
             }
 
             return groups;
+        }
+
+        private static List<VeinGroupWork> InterleaveGroupsByType(List<VeinGroupWork> groups)
+        {
+            Dictionary<EVeinType, List<VeinGroupWork>> byType = new Dictionary<EVeinType, List<VeinGroupWork>>();
+            List<List<VeinGroupWork>> typeGroups = new List<List<VeinGroupWork>>();
+            int largestTypeGroupCount = 0;
+
+            for (int i = 0; i < groups.Count; i++)
+            {
+                VeinGroupWork group = groups[i];
+                List<VeinGroupWork> typeGroup;
+                if (!byType.TryGetValue(group.Type, out typeGroup))
+                {
+                    typeGroup = new List<VeinGroupWork>();
+                    byType[group.Type] = typeGroup;
+                    typeGroups.Add(typeGroup);
+                }
+
+                typeGroup.Add(group);
+                if (typeGroup.Count > largestTypeGroupCount)
+                {
+                    largestTypeGroupCount = typeGroup.Count;
+                }
+            }
+
+            List<VeinGroupWork> interleaved = new List<VeinGroupWork>(groups.Count);
+            for (int round = 0; round < largestTypeGroupCount; round++)
+            {
+                for (int i = 0; i < typeGroups.Count; i++)
+                {
+                    if (round < typeGroups[i].Count)
+                    {
+                        interleaved.Add(typeGroups[i][round]);
+                    }
+                }
+            }
+
+            return interleaved;
         }
 
         private static void Shuffle<T>(IList<T> items, DotNet35Random rng)
