@@ -307,6 +307,7 @@
     <Compile Include="DarkFogControl.cs" />
     <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="BuildAnywhereOnWaterControl.cs" />
+    <Compile Include="PumpAnywhere.cs" />
     <Compile Include="FogThreatDampenerControl.cs" />
     <Compile Include="SmartRelayDispatchControl.cs" />
     <Compile Include="FasterResearchControl.cs" />

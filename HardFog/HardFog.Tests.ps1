@@ -4,12 +4,14 @@ $moduleDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $solutionPath = Join-Path $moduleDir "HardFog.slnx"
 $veinPlacementPath = Join-Path $moduleDir "VeinPlacementControl.cs"
 $waterBuildPath = Join-Path $moduleDir "BuildAnywhereOnWaterControl.cs"
+$pumpAnywherePath = Join-Path $moduleDir "PumpAnywhere.cs"
 $hardFogWindowPath = Join-Path $moduleDir "HardFogWindow.cs"
 $projectPath = Join-Path $moduleDir "HardFog.csproj"
 $manifestPath = Join-Path $moduleDir "Package\manifest.json"
 $readmePath = Join-Path $moduleDir "Package\README.md"
 $veinPlacementSource = Get-Content -LiteralPath $veinPlacementPath -Raw
 $waterBuildSource = Get-Content -LiteralPath $waterBuildPath -Raw
+$pumpAnywhereSource = Get-Content -LiteralPath $pumpAnywherePath -Raw
 $hardFogWindowSource = Get-Content -LiteralPath $hardFogWindowPath -Raw
 $projectSource = Get-Content -LiteralPath $projectPath -Raw
 $manifestSource = Get-Content -LiteralPath $manifestPath -Raw
@@ -60,12 +62,18 @@ Assert-SourceContains "IsValidTerrainCandidate(planet, group, candidate)" "Vein 
 Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a random target longitude."
 
 Assert-TextContains $projectSource 'Compile Include="BuildAnywhereOnWaterControl.cs"' "Build-anywhere-on-water control should be compiled into HardFog."
-Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.16")]' "HardFog plugin version should be 0.0.16."
+Assert-TextContains $projectSource 'Compile Include="PumpAnywhere.cs"' "Pump-anywhere control should be compiled into HardFog."
+Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.17")]' "HardFog plugin version should be 0.0.17."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true' "Water-build feature should default on in HardFog config."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Uninit();' "Water-build feature should be uninitialized with other controls."
 Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
-Assert-TextContains $manifestSource '"version_number": "0.0.16"' "Package manifest version should match the plugin version."
+Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Init(Config.Bind("HardFog", "PumpAnywhereEnabled", false' "Pump-anywhere feature should default off in HardFog config."
+Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Uninit();' "Pump-anywhere feature should be uninitialized with other controls."
+Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, PumpAnywhere.EnabledConfig' "Pump-anywhere feature should be exposed in the HardFog UI."
+Assert-TextContains $hardFogWindowSource 'I18N.Add(PumpAnywhereKey, "Pump anywhere", "平地抽水")' "Pump-anywhere UI should include English and Chinese labels."
+Assert-TextContains $manifestSource '"version_number": "0.0.17"' "Package manifest version should match the plugin version."
 Assert-TextContains $readmeSource 'Ignore ground support requirement' "Package README should document the ground-support override feature."
+Assert-TextContains $readmeSource 'Pump anywhere' "Package README should document the pump-anywhere feature."
 
 Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]' "Water-build control should patch manual build condition checks."
 Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]' "Water-build control should patch blueprint paste condition checks."
@@ -83,6 +91,19 @@ Assert-TextContains $waterBuildSource 'IsBlueprintAllowedCondition' "Blueprint r
 Assert-TextNotContains $waterBuildSource 'desc.allowBuildInWater = true;' "Water-build control should no longer mutate PrefabDesc water support flags."
 Assert-TextNotContains $waterBuildSource 'ThemeProto[] themes = LDB.themes.dataArray;' "Water-build control should no longer depend on theme water type data."
 Assert-TextNotContains $waterBuildSource '[HarmonyPatch(typeof(VFPreload), "InvokeOnLoadWorkEnded")]' "Water-build control should no longer patch preload for PrefabDesc overrides."
+
+Assert-TextContains $pumpAnywhereSource '[HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]' "Pump-anywhere control should patch manual build condition checks."
+Assert-TextContains $pumpAnywhereSource '[HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]' "Pump-anywhere control should patch blueprint paste condition checks."
+Assert-TextContains $pumpAnywhereSource 'private static void BuildToolClickCheckBuildConditionsPostfix(BuildTool_Click __instance, ref bool __result)' "Pump-anywhere manual patch should be a postfix that can update the build result."
+Assert-TextContains $pumpAnywhereSource 'private static void BuildToolBlueprintPasteCheckBuildConditionsPostfix(BuildTool_BlueprintPaste __instance, ref bool __result)' "Pump-anywhere blueprint patch should be a postfix that can update the build result."
+Assert-TextContains $pumpAnywhereSource 'bp.condition != EBuildCondition.NeedWater' "Pump-anywhere control should specifically target NeedWater conditions."
+Assert-TextContains $pumpAnywhereSource 'bp.condition = EBuildCondition.Ok;' "Pump-anywhere control should treat allowed NeedWater as buildable."
+Assert-TextContains $pumpAnywhereSource 'RemoveConditionErrorBuildings(tool, EBuildCondition.NeedWater)' "Pump-anywhere control should remove raw NeedWater blueprint error tips."
+Assert-TextContains $pumpAnywhereSource 'tool._tmpErrorTipsCursor' "Pump-anywhere control should keep the blueprint error tip cursor consistent."
+Assert-TextContains $pumpAnywhereSource 'BuildPreview.GetConditionText(EBuildCondition.Ok)' "Pump-anywhere manual build cursor should be refreshed after clearing NeedWater."
+Assert-TextContains $pumpAnywhereSource 'waterTypes[i] == waterItemId' "Pump-anywhere control should require the planet water type to match the building."
+Assert-TextNotContains $pumpAnywhereSource 'NeedGeothermalResource = EBuildCondition.Ok' "Pump-anywhere control should not clear geothermal resource requirements."
+Assert-TextNotContains $pumpAnywhereSource 'condition == EBuildCondition.NeedGeothermalResource' "Pump-anywhere control should not target geothermal resource failures."
 
 $buildOutput = dotnet build $solutionPath -t:Rebuild 2>&1
 $buildOutput | Write-Host

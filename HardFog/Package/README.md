@@ -12,6 +12,7 @@ HardFog adds a UXAssist configuration tab for Dark Fog cleanup tools and several
 - Relay stations only dispatch to markers, off by default.
 - Research Speed Multiplier: reduces research hash requirements to about 1/36, off by default.
 - Ignore ground support requirement: treats missing ground or foundation support as buildable, including water placement, on by default.
+- Pump anywhere: allows water pumps to be placed away from shore on planets with matching water type, off by default.
 - Better vein placement: relocates newly generated vein groups from each planet birth point into easier-to-plan equatorial longitude windows, on by default.
 - Fighters fly farther: boosts mecha-owned fighters with 10x range, 10x damage, and invincibility, off by default.
 
