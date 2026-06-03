@@ -60,5 +60,6 @@ For HardFog releases, also mention the package version and the generated zip pat
 ## 第三方库
 
 - UXAssist是UI基座，第三方，不要修改。
+- CheatEnabler是第三方mod，和UXAssist一样，仅供参考，不要修改。
 - Harmony是mod基座。
 - Assembly-CSharp是游戏源代码的dump
