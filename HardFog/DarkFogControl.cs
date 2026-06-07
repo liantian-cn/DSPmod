@@ -51,28 +51,18 @@ namespace HardFog
 
             for (var i = planetFactory.enemyCursor - 1; i > 0; i--)
             {
-                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
-                if (enemyData.id != i)
+                if (planetFactory.enemyPool[i].id != i)
                 {
                     continue;
                 }
 
                 try
                 {
-                    LogInfo("KillEnemyFinally -> enemyData.id: " + enemyData.id);
-
-                    int combatStatId = enemyData.combatStatId;
-                    if (combatStatId > 0)
-                    {
-                        planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
-                        planetFactory.skillSystem.combatStats.Remove(combatStatId);
-                    }
-
-                    planetFactory.KillEnemyFinally(i, ref CombatStat.empty);
+                    ClearGroundEnemy(planetFactory, combatStatsBuffer, i);
                 }
                 catch (Exception)
                 {
-                    LogInfo("error to kill enemy " + enemyData.id);
+                    LogInfo("error to clear enemy " + i);
                 }
             }
 
@@ -102,6 +92,28 @@ namespace HardFog
                 LogInfo("KillEnemyFinal -> enemyData.id: " + enemyData.id);
                 spaceSector.KillEnemyFinal(enemyData.id, ref CombatStat.empty);
             }
+        }
+
+        private static void ClearGroundEnemy(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
+        {
+            ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
+            int combatStatId = enemyData.combatStatId;
+            if (combatStatId > 0)
+            {
+                planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
+                planetFactory.skillSystem.combatStats.Remove(combatStatId);
+                enemyData.combatStatId = 0;
+            }
+
+            if (enemyData.dynamic)
+            {
+                LogInfo("RemoveEnemyWithComponents -> enemyData.id: " + enemyData.id);
+                planetFactory.RemoveEnemyWithComponents(enemyId);
+                return;
+            }
+
+            LogInfo("KillEnemyFinally -> enemyData.id: " + enemyData.id);
+            planetFactory.KillEnemyFinally(enemyId, ref CombatStat.empty);
         }
 
         private static void RemoveResidualGroundBaseRecords(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases)
