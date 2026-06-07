@@ -312,6 +312,7 @@
     <!-- FogThreatDampenerControl.cs 已弃用，由 SuperThreatReducerControl 取代 -->
     <!-- <Compile Include="FogThreatDampenerControl.cs" /> -->
     <Compile Include="SmartRelayDispatchControl.cs" />
+    <Compile Include="FasterRelayLaunchControl.cs" />
     <Compile Include="FasterResearchControl.cs" />
     <Compile Include="VeinPlacementControl.cs" />
     <Compile Include="OverpoweredMechaFightersControl.cs" />

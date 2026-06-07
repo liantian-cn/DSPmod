@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.21")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.22")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -18,6 +18,7 @@ namespace HardFog
         private const string SuperThreatReducerHiveKey = "super-threat-reducer-hive-enabled";
         private const string SuperThreatReducerGroundKey = "super-threat-reducer-ground-enabled";
         private const string SmartRelayDispatchKey = "smart-relay-dispatch-enabled";
+        private const string FasterRelayLaunchKey = "faster-relay-launch-enabled";
         private const string FasterResearchKey = "faster-research-enabled";
         private const string BuildAnywhereOnWaterKey = "build-anywhere-on-water-enabled";
         private const string VeinPlacementKey = "vein-placement-enabled";
@@ -47,6 +48,7 @@ namespace HardFog
                 Config.Bind("DarkFog", "SuperThreatReducerGroundEnabled", false, "Enable Ground Base Suppression. Skips ground base threat accumulation and assault scans."),
                 Logger);
             SmartRelayDispatchControl.Init(Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Enable relay station dispatch only to markers."), Logger);
+            FasterRelayLaunchControl.Init(Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false, "Enable faster relay station launch. Checks every 120 hive ticks and dispatches one idle relay when none is already outbound."), Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
             PumpAnywhere.Init(Config.Bind("HardFog", "PumpAnywhereEnabled", false, "Enable placing water pumps anywhere on planets with matching water type."), Logger);
@@ -60,6 +62,7 @@ namespace HardFog
             I18N.Add(SuperThreatReducerHiveKey, "Space Hive Suppression", "太空巢穴降压");
             I18N.Add(SuperThreatReducerGroundKey, "Ground Base Suppression", "地面基地降压");
             I18N.Add(SmartRelayDispatchKey, "Relay stations only dispatch to markers", "中继站只发往信标");
+            I18N.Add(FasterRelayLaunchKey, "Launch relay stations faster", "更快的发射中继站");
             I18N.Add(FasterResearchKey, "Research Speed Multiplier", "研究倍速器");
             I18N.Add(VeinPlacementKey, "Better vein placement", "更好的矿物位置");
             I18N.Add(OverpoweredMechaFightersKey, "Fighters fly farther", "战斗机更远的飞行距离");
@@ -79,6 +82,7 @@ namespace HardFog
             MyConfigWindow.OnUICreated -= CreateUI;
             SuperThreatReducerControl.Uninit();
             SmartRelayDispatchControl.Uninit();
+            FasterRelayLaunchControl.Uninit();
             FasterResearchControl.Uninit();
             BuildAnywhereOnWaterControl.Uninit();
             PumpAnywhere.Uninit();
@@ -101,6 +105,8 @@ namespace HardFog
             wnd.AddCheckBox(leftX, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
+            y += 36f;
+            wnd.AddCheckBox(leftX, y, tab, FasterRelayLaunchControl.EnabledConfig, FasterRelayLaunchKey, 16);
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
             y += 36f;

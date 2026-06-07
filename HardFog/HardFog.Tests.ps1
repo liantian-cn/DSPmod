@@ -7,13 +7,23 @@ $waterBuildPath = Join-Path $moduleDir "BuildAnywhereOnWaterControl.cs"
 $pumpAnywherePath = Join-Path $moduleDir "PumpAnywhere.cs"
 $hardFogWindowPath = Join-Path $moduleDir "HardFogWindow.cs"
 $darkFogControlPath = Join-Path $moduleDir "DarkFogControl.cs"
+$fasterRelayLaunchPath = Join-Path $moduleDir "FasterRelayLaunchControl.cs"
 $projectPath = Join-Path $moduleDir "HardFog.csproj"
+$manifestPath = Join-Path $moduleDir "Package\manifest.json"
+$readmePath = Join-Path $moduleDir "Package\README.md"
+$packageChangelogPath = Join-Path $moduleDir "Package\CHANGELOG.md"
+$rootChangelogPath = Join-Path $moduleDir "..\CHANGELOG.md"
 $veinPlacementSource = Get-Content -Encoding UTF8 -LiteralPath $veinPlacementPath -Raw
 $waterBuildSource = Get-Content -Encoding UTF8 -LiteralPath $waterBuildPath -Raw
 $pumpAnywhereSource = Get-Content -Encoding UTF8 -LiteralPath $pumpAnywherePath -Raw
 $hardFogWindowSource = Get-Content -Encoding UTF8 -LiteralPath $hardFogWindowPath -Raw
 $darkFogControlSource = Get-Content -Encoding UTF8 -LiteralPath $darkFogControlPath -Raw
+$fasterRelayLaunchSource = Get-Content -Encoding UTF8 -LiteralPath $fasterRelayLaunchPath -Raw
 $projectSource = Get-Content -Encoding UTF8 -LiteralPath $projectPath -Raw
+$manifestSource = Get-Content -Encoding UTF8 -LiteralPath $manifestPath -Raw
+$readmeSource = Get-Content -Encoding UTF8 -LiteralPath $readmePath -Raw
+$packageChangelogSource = Get-Content -Encoding UTF8 -LiteralPath $packageChangelogPath -Raw
+$rootChangelogSource = Get-Content -Encoding UTF8 -LiteralPath $rootChangelogPath -Raw
 $hardFogWindowExecutableSource = ($hardFogWindowSource -split "`r?`n" | Where-Object { -not $_.TrimStart().StartsWith("//") }) -join "`n"
 
 function Assert-SourceContains([string]$needle, [string]$message) {
@@ -62,6 +72,8 @@ Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a 
 
 Assert-TextContains $projectSource 'Compile Include="BuildAnywhereOnWaterControl.cs"' "Build-anywhere-on-water control should be compiled into HardFog."
 Assert-TextContains $projectSource 'Compile Include="PumpAnywhere.cs"' "Pump-anywhere control should be compiled into HardFog."
+Assert-TextContains $projectSource 'Compile Include="FasterRelayLaunchControl.cs"' "Faster relay launch control should be compiled into HardFog."
+Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.22")]' "HardFog plugin version should be 0.0.22."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true' "Water-build feature should default on in HardFog config."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Uninit();' "Water-build feature should be uninitialized with other controls."
 Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(leftX, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
@@ -73,6 +85,14 @@ Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Uninit();' "Pump-anywhere
 Assert-TextNotContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, PumpAnywhere.EnabledConfig' "Pump-anywhere feature should be hidden from the HardFog UI."
 Assert-TextNotContains $hardFogWindowSource 'PumpAnywhereKey' "Pump-anywhere UI label key should not be registered."
 Assert-TextNotContains $hardFogWindowSource 'I18N.Add(PumpAnywhereKey' "Pump-anywhere UI label should not be registered."
+Assert-TextContains $hardFogWindowSource 'FasterRelayLaunchControl.Init(Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false' "Faster relay launch feature should default off in HardFog config."
+Assert-TextContains $hardFogWindowSource 'FasterRelayLaunchControl.Uninit();' "Faster relay launch feature should be uninitialized with other controls."
+Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(leftX, y, tab, FasterRelayLaunchControl.EnabledConfig' "Faster relay launch feature should be exposed in the HardFog UI."
+Assert-TextContains $hardFogWindowSource 'I18N.Add(FasterRelayLaunchKey, "Launch relay stations faster"' "Faster relay launch UI label should be registered."
+Assert-TextContains $manifestSource '"version_number": "0.0.22"' "Package manifest version should match the plugin version."
+Assert-TextContains $readmeSource 'Launch relay stations faster' "Package README should document the faster relay launch feature."
+Assert-TextContains $packageChangelogSource '## 0.0.22' "Package changelog should include version 0.0.22."
+Assert-TextContains $rootChangelogSource '## 0.0.22' "Root changelog should include version 0.0.22."
 
 Assert-TextContains $darkFogControlSource 'ReturnRelaysTargetingPlanet(planet);' "Planet cleanup should return relays before clearing ground bases."
 Assert-TextContains $darkFogControlSource 'if (enemyData.dfRelayId > 0)' "Planet cleanup should recognize relay enemies in the space enemy pass."
@@ -80,6 +100,17 @@ Assert-TextContains $darkFogControlSource 'skip relay -> enemyData.id' "Planet c
 Assert-TextContains $darkFogControlSource 'private static bool ReturnRelay(DFRelayComponent relay)' "Planet cleanup should centralize relay return state changes."
 Assert-TextContains $darkFogControlSource 'relay.LeaveBase();' "Landed relays should use the game relay leave-base behavior."
 Assert-TextContains $darkFogControlSource 'relay.direction = -1;' "Targeted relays should be put into return direction."
+
+Assert-TextContains $fasterRelayLaunchSource 'private const int VanillaRelayDemandInterval = 600;' "Faster relay launch control should document the vanilla relay demand interval."
+Assert-TextContains $fasterRelayLaunchSource 'private const int FasterRelayDemandInterval = 120;' "Faster relay launch control should use a 120 hive tick relay demand interval."
+Assert-TextContains $fasterRelayLaunchSource '[HarmonyPatch(typeof(EnemyDFHiveSystem), "DetermineRelayDemand")]' "Faster relay launch control should patch relay demand."
+Assert-TextContains $fasterRelayLaunchSource 'DispatchOneIdleRelayIfAllowed(__instance);' "Faster relay launch control should replace demand logic with direct idle relay dispatch."
+Assert-TextContains $fasterRelayLaunchSource 'relay.direction > 0' "Faster relay launch control should avoid dispatching when a relay is already outbound."
+Assert-TextContains $fasterRelayLaunchSource '[HarmonyPatch(typeof(DFRelayComponent), "SearchTargetPlaceProcess")]' "Faster relay launch control should patch target planet selection."
+Assert-TextContains $fasterRelayLaunchSource 'CountNonGasPlanets(starData)' "Faster relay launch control should count non-gas target planets."
+Assert-TextContains $fasterRelayLaunchSource 'RandomTable.Integer(ref hive.rtseed, nonGasPlanetCount)' "Faster relay launch control should pick a non-gas planet uniformly."
+Assert-TextNotContains $fasterRelayLaunchSource 'ArriveBase' "Faster relay launch control should not alter landing arrival logic."
+Assert-TextNotContains $fasterRelayLaunchSource 'CheckLandCondition' "Faster relay launch control should not alter landing checks."
 
 Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_Click), "CheckBuildConditions")]' "Water-build control should patch manual build condition checks."
 Assert-TextContains $waterBuildSource '[HarmonyPatch(typeof(BuildTool_BlueprintPaste), "CheckBuildConditions")]' "Water-build control should patch blueprint paste condition checks."
