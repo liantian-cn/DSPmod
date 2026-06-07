@@ -38,7 +38,7 @@ Run module checks with the matching PowerShell script when present:
 
 Use the module README before changing behavior; many folders document the exact patch target and runtime assumptions.
 
-When changing HardFog user-facing behavior or plugin version, update `HardFog\Package\manifest.json` and `HardFog\Package\README.md` in the same task. Keep `manifest.json` `version_number` aligned with the `BepInPlugin` version in `HardFog\HardFogWindow.cs`.
+When changing HardFog user-facing behavior or plugin version, update `HardFog\Package\manifest.json` and `HardFog\Package\README.md` in the same task. Keep `manifest.json` `version_number` aligned with the `BepInPlugin` version in `HardFog\HardFogWindow.cs`. For meaningful release changes, update both root `CHANGELOG.md` and `HardFog\Package\CHANGELOG.md`; include only key changes, and skip minor bookkeeping such as renaming a setting label.
 
 ## Coding Style & Naming Conventions
 Follow the surrounding C# style in each file rather than introducing new formatting rules. Keep edits small and local. Use PascalCase for public types and members, camelCase for locals and private fields, and keep filenames aligned with the primary class or feature they contain.
