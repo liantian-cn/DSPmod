@@ -16,6 +16,7 @@ $hardFogWindowSource = Get-Content -LiteralPath $hardFogWindowPath -Raw
 $projectSource = Get-Content -LiteralPath $projectPath -Raw
 $manifestSource = Get-Content -LiteralPath $manifestPath -Raw
 $readmeSource = Get-Content -LiteralPath $readmePath -Raw
+$hardFogWindowExecutableSource = ($hardFogWindowSource -split "`r?`n" | Where-Object { -not $_.TrimStart().StartsWith("//") }) -join "`n"
 
 function Assert-SourceContains([string]$needle, [string]$message) {
     if (-not $veinPlacementSource.Contains($needle)) {
@@ -63,16 +64,19 @@ Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a 
 
 Assert-TextContains $projectSource 'Compile Include="BuildAnywhereOnWaterControl.cs"' "Build-anywhere-on-water control should be compiled into HardFog."
 Assert-TextContains $projectSource 'Compile Include="PumpAnywhere.cs"' "Pump-anywhere control should be compiled into HardFog."
-Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.19")]' "HardFog plugin version should be 0.0.19."
+Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.20")]' "HardFog plugin version should be 0.0.20."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true' "Water-build feature should default on in HardFog config."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Uninit();' "Water-build feature should be uninitialized with other controls."
-Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
+Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(leftX, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
+Assert-TextNotContains $hardFogWindowExecutableSource 'button-surface-ruins-build-geothermal-on-idle-ruins' "Geothermal-on-idle-ruins button should be hidden from the HardFog UI."
+Assert-TextContains $hardFogWindowSource '// buildGeothermalOnIdleRuinsButton = wnd.AddButton' "Geothermal-on-idle-ruins UI hook should remain as ghost code."
+Assert-TextContains $hardFogWindowSource 'SurfaceRuinControl.BuildGeothermalOnIdleRuinsCurrentPlanet' "Geothermal-on-idle-ruins implementation should remain reachable from ghost handler code."
 Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Init(Config.Bind("HardFog", "PumpAnywhereEnabled", false' "Pump-anywhere feature should default off in HardFog config."
 Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Uninit();' "Pump-anywhere feature should be uninitialized with other controls."
 Assert-TextNotContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, PumpAnywhere.EnabledConfig' "Pump-anywhere feature should be hidden from the HardFog UI."
 Assert-TextNotContains $hardFogWindowSource 'PumpAnywhereKey' "Pump-anywhere UI label key should not be registered."
 Assert-TextNotContains $hardFogWindowSource 'I18N.Add(PumpAnywhereKey' "Pump-anywhere UI label should not be registered."
-Assert-TextContains $manifestSource '"version_number": "0.0.19"' "Package manifest version should match the plugin version."
+Assert-TextContains $manifestSource '"version_number": "0.0.20"' "Package manifest version should match the plugin version."
 Assert-TextContains $readmeSource 'Ignore ground support requirement' "Package README should document the ground-support override feature."
 Assert-TextNotContains $readmeSource 'Pump anywhere' "Package README should not publicly document the hidden pump-anywhere feature."
 

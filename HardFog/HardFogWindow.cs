@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.19")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.20")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -33,7 +33,7 @@ namespace HardFog
         private static UIButton constructLowLatitudeRuinsButton;
         private static UIButton constructMidLatitudeRuinsButton;
         private static UIButton constructHighLatitudeRuinsButton;
-        private static UIButton buildGeothermalOnIdleRuinsButton;
+        private static UIButton buildGeothermalOnIdleRuinsButton = null;
 
         internal static ManualLogSource Log;
 
@@ -88,40 +88,43 @@ namespace HardFog
 
         private static void CreateUI(MyConfigWindow wnd, RectTransform trans)
         {
-            const float x = 10f;
+            const float leftX = 10f;
+            const float rightX = 400f;
             var y = 10f;
 
             wnd.AddSplitter(trans, 10f);
             wnd.AddTabGroup(trans, WindowTitleKey, "tab-group-hard-fog");
             RectTransform tab = wnd.AddTab(trans, WindowTitleKey);
 
-            clearCurrentPlanetButton = wnd.AddButton(x, y, 240, tab, ClearCurrentPlanetKey, 16, "button-clear-current-planet-dark-fog", OnClearCurrentPlanetClicked);
+            wnd.AddCheckBox(leftX, y, tab, SuperThreatReducerControl.EnabledConfigHive, SuperThreatReducerHiveKey, 16);
             y += 36f;
-            clearCurrentStarButton = wnd.AddButton(x, y, 240, tab, ClearCurrentStarKey, 16, "button-clear-current-star-dark-fog", OnClearCurrentStarClicked);
+            wnd.AddCheckBox(leftX, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
             y += 36f;
-            fillGalaxyHivesButton = wnd.AddButton(x, y, 240, tab, FillGalaxyHivesKey, 16, "button-fill-galaxy-dark-fog-hives", OnFillGalaxyHivesClicked);
+            wnd.AddCheckBox(leftX, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, SuperThreatReducerControl.EnabledConfigHive, SuperThreatReducerHiveKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, BuildAnywhereOnWaterControl.EnabledConfig, BuildAnywhereOnWaterKey, 16);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, VeinPlacementControl.EnabledConfig, VeinPlacementKey, 16);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, OverpoweredMechaFightersControl.EnabledConfig, OverpoweredMechaFightersKey, 16);
+
+            y = 10f;
+            clearCurrentPlanetButton = wnd.AddButton(rightX, y, 240, tab, ClearCurrentPlanetKey, 16, "button-clear-current-planet-dark-fog", OnClearCurrentPlanetClicked);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, BuildAnywhereOnWaterControl.EnabledConfig, BuildAnywhereOnWaterKey, 16);
+            clearCurrentStarButton = wnd.AddButton(rightX, y, 240, tab, ClearCurrentStarKey, 16, "button-clear-current-star-dark-fog", OnClearCurrentStarClicked);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, VeinPlacementControl.EnabledConfig, VeinPlacementKey, 16);
+            fillGalaxyHivesButton = wnd.AddButton(rightX, y, 240, tab, FillGalaxyHivesKey, 16, "button-fill-galaxy-dark-fog-hives", OnFillGalaxyHivesClicked);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, OverpoweredMechaFightersControl.EnabledConfig, OverpoweredMechaFightersKey, 16);
+            constructLowLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
             y += 36f;
-            constructLowLatitudeRuinsButton = wnd.AddButton(x, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
+            constructMidLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructMidLatitudeRuinsKey, 16, "button-surface-ruins-construct-mid-latitude", OnConstructMidLatitudeRuinsClicked);
             y += 36f;
-            constructMidLatitudeRuinsButton = wnd.AddButton(x, y, 260, tab, ConstructMidLatitudeRuinsKey, 16, "button-surface-ruins-construct-mid-latitude", OnConstructMidLatitudeRuinsClicked);
-            y += 36f;
-            constructHighLatitudeRuinsButton = wnd.AddButton(x, y, 260, tab, ConstructHighLatitudeRuinsKey, 16, "button-surface-ruins-construct-high-latitude", OnConstructHighLatitudeRuinsClicked);
-            y += 36f;
-            buildGeothermalOnIdleRuinsButton = wnd.AddButton(x, y, 340, tab, BuildGeothermalOnIdleRuinsKey, 16, "button-surface-ruins-build-geothermal-on-idle-ruins", OnBuildGeothermalOnIdleRuinsClicked);
+            constructHighLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructHighLatitudeRuinsKey, 16, "button-surface-ruins-construct-high-latitude", OnConstructHighLatitudeRuinsClicked);
+            // Ghost UI hook: keep the geothermal helper code, but do not expose the button.
+            // y += 36f;
+            // buildGeothermalOnIdleRuinsButton = wnd.AddButton(rightX, y, 340, tab, BuildGeothermalOnIdleRuinsKey, 16, "button-surface-ruins-build-geothermal-on-idle-ruins", OnBuildGeothermalOnIdleRuinsClicked);
         }
 
         private static void OnClearCurrentPlanetClicked()
