@@ -37,25 +37,17 @@ namespace HardFog
             ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
             List<int> baseIds = CollectGroundBaseIds(bases);
 
-            for (int i = planetFactory.enemyCursor - 1; i > 0; i--)
+            foreach (int baseId in baseIds)
             {
-                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
-                if (enemyData.id != i)
-                {
-                    continue;
-                }
-
-                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, i);
+                ClearGroundUnitsForBase(planetFactory, combatStatsBuffer, baseId);
             }
 
             foreach (int baseId in baseIds)
             {
-                DFGBaseComponent baseComponent = GetGroundBase(planetFactory, baseId);
-                if (baseComponent != null)
-                {
-                    ClearGroundBaseFormations(baseComponent);
-                }
+                ClearGroundBuildingsForBase(planetFactory, combatStatsBuffer, baseId);
             }
+
+            ClearResidualGroundEnemies(planetFactory, combatStatsBuffer, includeBaseCores: false);
 
             foreach (int baseId in baseIds)
             {
@@ -63,10 +55,10 @@ namespace HardFog
                 RemoveResidualGroundBaseRecord(planetFactory, bases, baseId);
             }
 
-            planetFactory.enemySystem.Free();
-            UIRoot.instance.uiGame.dfAssaultTip.ClearAllSpots();
-
             ReturnRelaysTargetingPlanet(planet);
+            ClearResidualGroundEnemies(planetFactory, combatStatsBuffer, includeBaseCores: true);
+            ClearGroundWreckage(planet);
+            ClearDarkFogAssaultTips();
 
             SpaceSector spaceSector = GameMain.spaceSector;
 
@@ -114,6 +106,57 @@ namespace HardFog
             return baseIds;
         }
 
+        private static void ClearGroundUnitsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
+        {
+            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: true, coreLast: false))
+            {
+                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
+            }
+
+            DFGBaseComponent baseComponent = GetGroundBase(planetFactory, baseId);
+            if (baseComponent != null)
+            {
+                ClearGroundBaseFormations(baseComponent);
+            }
+        }
+
+        private static void ClearGroundBuildingsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
+        {
+            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: false, coreLast: true))
+            {
+                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
+            }
+        }
+
+        private static List<int> CollectBaseEnemyIds(PlanetFactory planetFactory, int baseId, bool dynamicOnly, bool coreLast)
+        {
+            List<int> enemyIds = new List<int>();
+            int baseCoreEnemyId = 0;
+            for (int i = 1; i < planetFactory.enemyCursor; i++)
+            {
+                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
+                if (enemyData.id != i || enemyData.owner != baseId || enemyData.dynamic != dynamicOnly)
+                {
+                    continue;
+                }
+
+                if (coreLast && enemyData.dfGBaseId == baseId)
+                {
+                    baseCoreEnemyId = i;
+                    continue;
+                }
+
+                enemyIds.Add(i);
+            }
+
+            if (baseCoreEnemyId > 0)
+            {
+                enemyIds.Add(baseCoreEnemyId);
+            }
+
+            return enemyIds;
+        }
+
         private static void ClearGroundEnemyFinally(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
         {
             if (enemyId <= 0 || enemyId >= planetFactory.enemyCursor || planetFactory.enemyPool[enemyId].id != enemyId)
@@ -133,15 +176,161 @@ namespace HardFog
             }
         }
 
+        private static void ClearResidualGroundEnemies(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, bool includeBaseCores)
+        {
+            List<int> enemyIds = new List<int>();
+            for (int i = planetFactory.enemyCursor - 1; i > 0; i--)
+            {
+                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
+                if (enemyData.id == i && (includeBaseCores || enemyData.dfGBaseId <= 0))
+                {
+                    enemyIds.Add(i);
+                }
+            }
+
+            foreach (int enemyId in enemyIds)
+            {
+                if (enemyId <= 0 || enemyId >= planetFactory.enemyCursor || planetFactory.enemyPool[enemyId].id != enemyId)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    RemoveGroundEnemyCombatStat(planetFactory, combatStatsBuffer, enemyId);
+                    LogInfo("RemoveEnemyWithComponents -> enemyData.id: " + enemyId);
+                    planetFactory.RemoveEnemyWithComponents(enemyId);
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to remove residual enemy " + enemyId);
+                    ClearGroundEnemySlotFallback(planetFactory, enemyId);
+                }
+            }
+        }
+
         private static void RemoveGroundEnemyCombatStat(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
         {
             ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
             int combatStatId = enemyData.combatStatId;
-            if (combatStatId > 0)
+            if (combatStatId > 0 && combatStatId < combatStatsBuffer.Length && combatStatsBuffer[combatStatId].id == combatStatId)
             {
                 planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
                 planetFactory.skillSystem.combatStats.Remove(combatStatId);
                 enemyData.combatStatId = 0;
+            }
+        }
+
+        private static void ClearGroundEnemySlotFallback(PlanetFactory planetFactory, int enemyId)
+        {
+            if (enemyId <= 0 || enemyId >= planetFactory.enemyCursor || planetFactory.enemyPool[enemyId].id != enemyId)
+            {
+                return;
+            }
+
+            try
+            {
+                ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
+
+                if (enemyData.modelId != 0 && GameMain.gpuiManager.activeFactory == planetFactory)
+                {
+                    GameMain.gpuiManager.RemoveModel(enemyData.modelIndex, enemyData.modelId);
+                }
+
+                if (enemyData.mmblockId != 0 && planetFactory.blockContainer != null)
+                {
+                    planetFactory.blockContainer.RemoveMiniBlock(enemyData.mmblockId);
+                }
+
+                if (enemyData.colliderId != 0 && planetFactory.planet.physics != null)
+                {
+                    planetFactory.planet.physics.RemoveLinkedColliderData(enemyData.colliderId);
+                }
+
+                if (enemyData.audioId != 0 && planetFactory.planet.audio != null)
+                {
+                    planetFactory.planet.audio.RemoveAudioData(enemyData.audioId);
+                    planetFactory.planet.audio.NotifyObjectRemove(EObjectType.Enemy, enemyId);
+                }
+
+                if (enemyData.hashAddress != 0)
+                {
+                    if (enemyData.dynamic)
+                    {
+                        planetFactory.hashSystemDynamic.RemoveObjectFromBucket(enemyData.hashAddress);
+                    }
+                    else
+                    {
+                        planetFactory.hashSystemStatic.RemoveObjectFromBucket(enemyData.hashAddress);
+                    }
+                }
+
+                ClearGroundEnemyLogicComponentsFallback(planetFactory, ref enemyData);
+                planetFactory.skillSystem.OnRemovingSkillTarget(enemyId, planetFactory.planet.astroId, ETargetType.Enemy);
+                enemyData.SetEmpty();
+                planetFactory.enemyAnimPool[enemyId] = default(AnimData);
+
+                if (planetFactory.planet.physics != null)
+                {
+                    planetFactory.planet.physics.NotifyObjectRemove(EObjectType.Enemy, enemyId);
+                }
+            }
+            catch (Exception)
+            {
+                LogInfo("error to fallback-clear enemy " + enemyId);
+            }
+        }
+
+        private static void ClearGroundEnemyLogicComponentsFallback(PlanetFactory planetFactory, ref EnemyData enemyData)
+        {
+            try
+            {
+                if (enemyData.dfGBaseId != 0)
+                {
+                    planetFactory.platformSystem?.RemoveStateArea((uint)(0x1000000uL | (ulong)enemyData.dfGBaseId));
+                    planetFactory.enemySystem.RemoveDFGBaseComponent(enemyData.dfGBaseId);
+                    enemyData.dfGBaseId = 0;
+                }
+
+                if (enemyData.dfGConnectorId != 0)
+                {
+                    planetFactory.enemySystem.RemoveDFGConnectorComponent(enemyData.dfGConnectorId);
+                    enemyData.dfGConnectorId = 0;
+                }
+
+                if (enemyData.dfGReplicatorId != 0)
+                {
+                    planetFactory.enemySystem.RemoveDFGReplicatorComponent(enemyData.dfGReplicatorId);
+                    enemyData.dfGReplicatorId = 0;
+                }
+
+                if (enemyData.dfGTurretId != 0)
+                {
+                    planetFactory.enemySystem.RemoveDFGTurretComponent(enemyData.dfGTurretId);
+                    enemyData.dfGTurretId = 0;
+                }
+
+                if (enemyData.dfGShieldId != 0)
+                {
+                    planetFactory.enemySystem.RemoveDFGShieldComponent(enemyData.dfGShieldId);
+                    enemyData.dfGShieldId = 0;
+                }
+
+                if (enemyData.unitId != 0)
+                {
+                    planetFactory.enemySystem.RemoveEnemyUnitComponent(enemyData.unitId);
+                    enemyData.unitId = 0;
+                }
+
+                if (enemyData.builderId != 0)
+                {
+                    planetFactory.enemySystem.RemoveEnemyBuilderComponent(enemyData.builderId);
+                    enemyData.builderId = 0;
+                }
+            }
+            catch (Exception)
+            {
+                LogInfo("error to fallback-clear enemy logic components");
             }
         }
 
@@ -338,6 +527,39 @@ namespace HardFog
                 {
                     LogInfo("error to clear form " + i);
                 }
+            }
+        }
+
+        private static void ClearGroundWreckage(PlanetData planet)
+        {
+            WreckageContainer wreckageContainer = planet?.factoryModel?.wreckageContainer;
+            if (wreckageContainer == null || wreckageContainer.fragments == null)
+            {
+                return;
+            }
+
+            for (int i = wreckageContainer.cursor - 1; i > 0; i--)
+            {
+                try
+                {
+                    wreckageContainer.RemoveFragment(i);
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to remove wreckage fragment " + i);
+                }
+            }
+        }
+
+        private static void ClearDarkFogAssaultTips()
+        {
+            try
+            {
+                UIRoot.instance?.uiGame?.dfAssaultTip?.ClearAllSpots();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to clear dark fog assault tips");
             }
         }
 

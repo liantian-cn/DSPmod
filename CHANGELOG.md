@@ -1,16 +1,14 @@
 # Changelog
 
-## 0.0.23
+## 0.0.22
 
+- Added the faster relay station launch option: relay demand checks run every 120 hive ticks and non-gas target planets receive dispatch chances evenly.
 - Unified faster relay launch and marker-only relay dispatch into one relay control path.
 - Marker-only relay dispatch is now a sub-option of faster relay launch and only applies when faster relay launch is enabled.
 
-## 0.0.22
-
-- 增加“更快的发射中继站”开关：缩短中继站需求检查周期，并让非气态目标星球均匀获得派发机会。
-
 ## 0.0.21
 
-- 修改了清理地面基地逻辑，不再消灭中继站。
-- 清理当前星球地面黑雾后会移除残留的地面基地记录，让基地废墟变为无主废墟，避免后续中继站优先复活这些废墟。
-- 清理当前星球地面黑雾时会按基地顺序处理：先模拟击杀地面单位，再模拟摧毁基地建筑，最后遣返中继站。
+- Changed current-planet Dark Fog ground cleanup so relay stations are returned instead of destroyed.
+- After clearing current-planet ground Dark Fog, residual ground base records are removed so base ruins become ownerless ruins instead of priority revival targets.
+- Current-planet ground Dark Fog cleanup now processes bases in order: simulate killing ground units, simulate destroying base buildings, then return relay stations.
+- Fixed current-planet ground Dark Fog cleanup leaving noninteractive residual enemy visuals by hard-removing remaining ground enemies and clearing local ground wreckage.
