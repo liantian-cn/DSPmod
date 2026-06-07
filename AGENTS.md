@@ -59,6 +59,21 @@ Pull requests should state which mod folders changed, what gameplay behavior mov
 
 For HardFog releases, also mention the package version and the generated zip path.
 
+## Changelog 规范
+
+- HardFog 的 CHANGELOG.md（根目录和 `HardFog/Package/` 下各一份，内容相同）使用双语格式：上面中文，下面英文。每个版本的每条变更都需要同时提供中英文条目。
+- 标题使用 `# 更新日志 / Changelog`。
+
+## 版本号与发布规范
+
+- **未明确指令更新版本号时**：不要更新版本号（`HardFogWindow.cs` 中的 `BepInPlugin` version、`manifest.json` 的 `version_number`）。但 `CHANGELOG.md` 需要写入最新的变更内容（在现有版本号条目下追加，或新建版本号条目但暂不更新其它文件中的版本号）。
+- **用户下指令更新版本号后**：将所有 CHANGELOG.md 中积累的最新变更纳入新版本号条目，更新 `HardFogWindow.cs` 的 `BepInPlugin` version、`manifest.json` 的 `version_number`，并执行编译打包：
+  ```powershell
+  dotnet build HardFog\HardFog.slnx
+  .\HardFog\Pack-HardFog.ps1
+  ```
+  确认生成的 zip 文件存在且包含 `HardFog.dll`、`manifest.json`、`README.md`、`icon.png`。
+
 ## 第三方库
 
 - UXAssist是UI基座，第三方，不要修改。
