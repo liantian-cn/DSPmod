@@ -305,6 +305,7 @@
   <ItemGroup>
     <Compile Include="HardFogWindow.cs" />
     <Compile Include="DarkFogControl.cs" />
+    <Compile Include="RuinPositions.cs" />
     <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="BuildAnywhereOnWaterControl.cs" />
     <Compile Include="SuperThreatReducerControl.cs" />
