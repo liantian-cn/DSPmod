@@ -324,12 +324,16 @@ namespace HardFog
         }
 
         // 检查兄弟巢穴的中继是否已经锁定了同一坐标（避免多个中继抢同一个候选）。
+        // 注意：targetLPos 在 realRadius+70 轨道高度，candidate 在地表（realRadius+0.2），
+        // 必须归一化到同一半径再比较，否则 ~70 的海拔差会让 52m 阈值永远无法触发。
         private static bool IsCandidateTargetedByOtherRelay(
             EnemyDFHiveSystem hive,
             int astroId,
             Vector3 candidate,
             float clearanceSq)
         {
+            float candidateRadius = candidate.magnitude;
+
             for (EnemyDFHiveSystem sibling = hive.firstSibling; sibling != null; sibling = sibling.nextSibling)
             {
                 DFRelayComponent[] buffer = sibling.relays.buffer;
@@ -337,14 +341,27 @@ namespace HardFog
                 for (int i = 1; i < cursor; i++)
                 {
                     DFRelayComponent relay = buffer[i];
-                    if (relay != null &&
-                        relay.id == i &&
-                        relay.targetAstroId == astroId &&
-                        relay.direction > 0)
+                    if (relay == null || relay.id != i || relay.direction <= 0)
                     {
-                        Vector3 relayTarget = relay.targetLPos;
-                        float sqrDist = (relayTarget - candidate).sqrMagnitude;
-                        if (sqrDist < clearanceSq)
+                        continue;
+                    }
+
+                    // targetLPos：RelaySailLogic 写入的轨道高度坐标。
+                    if (relay.targetAstroId == astroId && relay.targetLPos.sqrMagnitude > 0.01f)
+                    {
+                        Vector3 surfacePos = relay.targetLPos.normalized * candidateRadius;
+                        if ((surfacePos - candidate).sqrMagnitude < clearanceSq)
+                        {
+                            return true;
+                        }
+                    }
+
+                    // searchLPos：我们的 Prefix 在 SearchTargetPlaceProcess 内写入，
+                    // 此时 targetLPos 尚未被 RelaySailLogic 设置，同一帧内的后续中继需要用 searchLPos 判断。
+                    if (relay.searchAstroId == astroId && relay.searchLPos.sqrMagnitude > 0.01f)
+                    {
+                        Vector3 surfacePos = relay.searchLPos.normalized * candidateRadius;
+                        if ((surfacePos - candidate).sqrMagnitude < clearanceSq)
                         {
                             return true;
                         }
