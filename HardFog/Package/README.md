@@ -10,8 +10,8 @@ HardFog adds a UXAssist configuration tab for Dark Fog cleanup tools and several
 - Generate Dark Fog surface ruins on the current planet.
 - ~~Dark Fog Pressure Reducer~~ (deprecated, replaced by Super Threat Reducer)
 - Super Threat Reducer: independently suppress space hive and / or ground base threat accumulation by skipping heavy threat computations, off by default.
-- Relay stations only dispatch to markers, off by default.
 - Launch relay stations faster: checks relay demand every 120 hive ticks, dispatches one idle relay only when none is already outbound, and chooses non-gas target planets evenly, off by default.
+- Relay stations only dispatch to markers: a sub-option of faster relay launch. When enabled, faster relay launch only sends relays to available relay-attracting markers.
 - Research Speed Multiplier: reduces research hash requirements to about 1/36, off by default.
 - Ignore ground support requirement: treats missing ground or foundation support as buildable, including water placement, on by default.
 - Better vein placement: relocates newly generated vein groups from each planet birth point into easier-to-plan equatorial longitude windows, on by default.

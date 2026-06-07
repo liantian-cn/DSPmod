@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.23
+
+- Unified faster relay launch and marker-only relay dispatch into one relay control path.
+- Marker-only relay dispatch is now a sub-option of faster relay launch and only applies when faster relay launch is enabled.
+
 ## 0.0.22
 
 - 增加“更快的发射中继站”开关：缩短中继站需求检查周期，并让非气态目标星球均匀获得派发机会。
