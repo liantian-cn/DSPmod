@@ -46,11 +46,11 @@ Follow the surrounding C# style in each file rather than introducing new formatt
 PowerShell scripts should stay in the module root and use the same naming pattern as the module, such as `ModuleName.Tests.ps1`.
 
 ## Testing Guidelines
-Prefer the narrowest verification that covers the change: run the module’s `.Tests.ps1` script, then build the affected solution. For changes that touch shared game references or multiple mods, verify every impacted module separately.
+Prefer the narrowest verification that covers the change: run the module’s `.Tests.ps1` script when one exists, then build the affected solution. For changes that touch shared game references or multiple mods, verify every impacted module separately.
 
-Keep `HardFog.Tests.ps1` focused on meaningful behavior or regression coverage. Do not add assertions for package version strings, README or manifest wording, description text, or similar low-value metadata bookkeeping. If there is no useful automated test to write for a change, do not add one just to have a test.
+Do not create, restore, or maintain `HardFog\HardFog.Tests.ps1`. The removed script only performed source-text assertions and low-value metadata checks, and it caused repeated encoding/token churn. Do not replace meaningful HardFog verification with PowerShell checks that only assert text snippets, version strings, README or manifest wording, description text, or similar bookkeeping.
 
-For HardFog packaging changes, run `.\HardFog\Pack-HardFog.ps1`; run `.\HardFog\HardFog.Tests.ps1` only when the change has meaningful behavior or regression coverage there. Confirm the generated zip exists and contains `HardFog.dll`, `manifest.json`, `README.md`, and `icon.png` at the zip root.
+For HardFog code changes, build `.\HardFog\HardFog.slnx`. For HardFog packaging changes, run `.\HardFog\Pack-HardFog.ps1`. Confirm the generated zip exists and contains `HardFog.dll`, `manifest.json`, `README.md`, and `icon.png` at the zip root.
 
 ## Commit & Pull Request Guidelines
 Commit history uses short, prefixed messages such as `feat:`, `fix:`, and `chore:`. Follow that style and keep the subject specific.
