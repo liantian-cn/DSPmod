@@ -308,7 +308,9 @@
     <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="BuildAnywhereOnWaterControl.cs" />
     <Compile Include="PumpAnywhere.cs" />
-    <Compile Include="FogThreatDampenerControl.cs" />
+    <Compile Include="SuperThreatReducerControl.cs" />
+    <!-- FogThreatDampenerControl.cs 已弃用，由 SuperThreatReducerControl 取代 -->
+    <!-- <Compile Include="FogThreatDampenerControl.cs" /> -->
     <Compile Include="SmartRelayDispatchControl.cs" />
     <Compile Include="FasterResearchControl.cs" />
     <Compile Include="VeinPlacementControl.cs" />
