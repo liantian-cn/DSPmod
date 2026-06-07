@@ -186,9 +186,15 @@ namespace HardFog
                 CollectRuinPositionCandidates(planet, candidates);
             }
 
-            // 按顺序遍历候选落点，找第一个满足 52m 净空要求的。
+            // 按顺序遍历候选落点，找第一个满足 AT 场 + 52m 净空要求的。
             foreach (Vector3 candidate in candidates)
             {
+                // AT 场检查（仅此一项保留原版逻辑，其余忽略）。
+                if (factory != null && factory.planetATField != null && !factory.planetATField.TestRelayCondition(candidate))
+                {
+                    continue;
+                }
+
                 if (IsCandidateClear(hive, factory, planet.astroId, candidate))
                 {
                     // 候选坐标是星球表面位置；searchLPos 需要抬高到轨道高度。
@@ -373,11 +379,25 @@ namespace HardFog
             return false;
         }
 
-        // 航行中绕过原版 CheckLandCondition（包含实体扫描、AT 场等），让我们的预设落点不会被否决。
+        // 航行中只保留 AT 场检查，忽略原版其他检查（实体扫描、建筑间距等）。
         [HarmonyPrefix]
         [HarmonyPatch(typeof(DFRelayComponent), "CheckLandCondition")]
-        private static bool DFRelayComponentCheckLandConditionPrefix(ref bool __result)
+        private static bool DFRelayComponentCheckLandConditionPrefix(
+            DFRelayComponent __instance,
+            PlanetFactory factory,
+            Vector3 tarpos,
+            ref bool __result)
         {
+            // 仅检查 AT 场：有 AT 场且该场阻挡该位置时拒绝降落，其余一律放行。
+            if (__instance.dstMarkerId == 0 &&
+                factory != null &&
+                factory.planetATField != null &&
+                !factory.planetATField.TestRelayCondition(tarpos))
+            {
+                __result = false;
+                return false;
+            }
+
             __result = true;
             return false;
         }
