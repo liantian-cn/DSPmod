@@ -37,14 +37,24 @@ namespace HardFog
             ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
             List<int> baseIds = CollectGroundBaseIds(bases);
 
-            foreach (int baseId in baseIds)
+            for (int i = planetFactory.enemyCursor - 1; i > 0; i--)
             {
-                ClearGroundUnitsForBase(planetFactory, combatStatsBuffer, baseId);
+                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
+                if (enemyData.id != i)
+                {
+                    continue;
+                }
+
+                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, i);
             }
 
             foreach (int baseId in baseIds)
             {
-                ClearGroundBuildingsForBase(planetFactory, combatStatsBuffer, baseId);
+                DFGBaseComponent baseComponent = GetGroundBase(planetFactory, baseId);
+                if (baseComponent != null)
+                {
+                    ClearGroundBaseFormations(baseComponent);
+                }
             }
 
             foreach (int baseId in baseIds)
@@ -52,6 +62,9 @@ namespace HardFog
                 ReturnRelaysTargetingGroundBase(planet, baseId);
                 RemoveResidualGroundBaseRecord(planetFactory, bases, baseId);
             }
+
+            planetFactory.enemySystem.Free();
+            UIRoot.instance.uiGame.dfAssaultTip.ClearAllSpots();
 
             ReturnRelaysTargetingPlanet(planet);
 
@@ -99,57 +112,6 @@ namespace HardFog
             }
 
             return baseIds;
-        }
-
-        private static void ClearGroundUnitsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
-        {
-            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: true, coreLast: false))
-            {
-                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
-            }
-
-            DFGBaseComponent baseComponent = GetGroundBase(planetFactory, baseId);
-            if (baseComponent != null)
-            {
-                ClearGroundBaseFormations(baseComponent);
-            }
-        }
-
-        private static void ClearGroundBuildingsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
-        {
-            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: false, coreLast: true))
-            {
-                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
-            }
-        }
-
-        private static List<int> CollectBaseEnemyIds(PlanetFactory planetFactory, int baseId, bool dynamicOnly, bool coreLast)
-        {
-            List<int> enemyIds = new List<int>();
-            int baseCoreEnemyId = 0;
-            for (int i = 1; i < planetFactory.enemyCursor; i++)
-            {
-                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
-                if (enemyData.id != i || enemyData.owner != baseId || enemyData.dynamic != dynamicOnly)
-                {
-                    continue;
-                }
-
-                if (coreLast && enemyData.dfGBaseId == baseId)
-                {
-                    baseCoreEnemyId = i;
-                    continue;
-                }
-
-                enemyIds.Add(i);
-            }
-
-            if (baseCoreEnemyId > 0)
-            {
-                enemyIds.Add(baseCoreEnemyId);
-            }
-
-            return enemyIds;
         }
 
         private static void ClearGroundEnemyFinally(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
