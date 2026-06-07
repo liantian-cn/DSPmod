@@ -8,6 +8,8 @@ using UnityEngine;
 
 namespace HardFog
 {
+    // Ghost file: kept for reference only. RelayControl.cs replaces this class and
+    // HardFog.csproj no longer compiles this file.
     [HarmonyPatch]
     internal static class FasterRelayLaunchControl
     {

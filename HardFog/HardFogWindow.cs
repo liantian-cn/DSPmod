@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.22")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.23")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -47,8 +47,10 @@ namespace HardFog
                 Config.Bind("DarkFog", "SuperThreatReducerHiveEnabled", false, "Enable Space Hive Suppression. Zeros space hive threat and skips assault scans."),
                 Config.Bind("DarkFog", "SuperThreatReducerGroundEnabled", false, "Enable Ground Base Suppression. Skips ground base threat accumulation and assault scans."),
                 Logger);
-            SmartRelayDispatchControl.Init(Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Enable relay station dispatch only to markers."), Logger);
-            FasterRelayLaunchControl.Init(Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false, "Enable faster relay station launch. Checks every 120 hive ticks and dispatches one idle relay when none is already outbound."), Logger);
+            RelayControl.Init(
+                Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false, "Enable faster relay station launch. Checks every 120 hive ticks and dispatches one idle relay when none is already outbound."),
+                Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Only applies when faster relay station launch is enabled. Dispatch relay stations only to markers."),
+                Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
             VeinPlacementControl.Init(Config.Bind("HardFog", "VeinPlacementEnabled", true, "Enable better vein placement for future planet vein generation."), Logger);
@@ -80,8 +82,7 @@ namespace HardFog
         {
             MyConfigWindow.OnUICreated -= CreateUI;
             SuperThreatReducerControl.Uninit();
-            SmartRelayDispatchControl.Uninit();
-            FasterRelayLaunchControl.Uninit();
+            RelayControl.Uninit();
             FasterResearchControl.Uninit();
             BuildAnywhereOnWaterControl.Uninit();
             VeinPlacementControl.Uninit();
@@ -102,9 +103,12 @@ namespace HardFog
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
             y += 36f;
-            wnd.AddCheckBox(leftX, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, RelayControl.FasterRelayLaunchEnabledConfig, FasterRelayLaunchKey, 16);
             y += 36f;
-            wnd.AddCheckBox(leftX, y, tab, FasterRelayLaunchControl.EnabledConfig, FasterRelayLaunchKey, 16);
+            MyCheckBox smartRelayDispatchCheckBox = wnd.AddCheckBox(leftX + 20f, y, tab, RelayControl.SmartRelayDispatchEnabledConfig, SmartRelayDispatchKey, 13);
+            RelayControl.FasterRelayLaunchEnabledConfig.SettingChanged += RelayOptionChanged;
+            wnd.OnFree += () => { RelayControl.FasterRelayLaunchEnabledConfig.SettingChanged -= RelayOptionChanged; };
+            RelayOptionChanged(null, null);
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
             y += 36f;
@@ -129,6 +133,11 @@ namespace HardFog
             // Ghost UI hook: keep the geothermal helper code, but do not expose the button.
             // y += 36f;
             // buildGeothermalOnIdleRuinsButton = wnd.AddButton(rightX, y, 340, tab, BuildGeothermalOnIdleRuinsKey, 16, "button-surface-ruins-build-geothermal-on-idle-ruins", OnBuildGeothermalOnIdleRuinsClicked);
+
+            void RelayOptionChanged(object sender, EventArgs args)
+            {
+                smartRelayDispatchCheckBox.SetEnable(RelayControl.FasterRelayLaunchEnabledConfig.Value);
+            }
         }
 
         private static void OnClearCurrentPlanetClicked()

@@ -312,8 +312,8 @@
     <!-- <Compile Include="PumpAnywhere.cs" /> -->
     <!-- FogThreatDampenerControl.cs 已弃用，由 SuperThreatReducerControl 取代 -->
     <!-- <Compile Include="FogThreatDampenerControl.cs" /> -->
-    <Compile Include="SmartRelayDispatchControl.cs" />
-    <Compile Include="FasterRelayLaunchControl.cs" />
+    <!-- SmartRelayDispatchControl.cs and FasterRelayLaunchControl.cs are ghost reference files; RelayControl.cs replaces them. -->
+    <Compile Include="RelayControl.cs" />
     <Compile Include="FasterResearchControl.cs" />
     <Compile Include="VeinPlacementControl.cs" />
     <Compile Include="OverpoweredMechaFightersControl.cs" />
