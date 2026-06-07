@@ -48,7 +48,9 @@ PowerShell scripts should stay in the module root and use the same naming patter
 ## Testing Guidelines
 Prefer the narrowest verification that covers the change: run the module’s `.Tests.ps1` script, then build the affected solution. For changes that touch shared game references or multiple mods, verify every impacted module separately.
 
-For HardFog packaging changes, run `.\HardFog\HardFog.Tests.ps1` and `.\HardFog\Pack-HardFog.ps1`. Confirm the generated zip name matches `liantian-HardFog-<version>.zip` and contains `HardFog.dll`, `manifest.json`, `README.md`, and `icon.png` at the zip root.
+Keep `HardFog.Tests.ps1` focused on meaningful behavior or regression coverage. Do not add assertions for package version strings, README or manifest wording, description text, or similar low-value metadata bookkeeping. If there is no useful automated test to write for a change, do not add one just to have a test.
+
+For HardFog packaging changes, run `.\HardFog\Pack-HardFog.ps1`; run `.\HardFog\HardFog.Tests.ps1` only when the change has meaningful behavior or regression coverage there. Confirm the generated zip exists and contains `HardFog.dll`, `manifest.json`, `README.md`, and `icon.png` at the zip root.
 
 ## Commit & Pull Request Guidelines
 Commit history uses short, prefixed messages such as `feat:`, `fix:`, and `chore:`. Follow that style and keep the subject specific.
