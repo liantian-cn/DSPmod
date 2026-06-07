@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using BepInEx.Logging;
 
 namespace HardFog
@@ -8,6 +9,9 @@ namespace HardFog
     internal static class DarkFogControl
     {
         internal static ManualLogSource Log;
+        private static readonly FieldInfo EnemyCapacityField = typeof(PlanetFactory).GetField("enemyCapacity", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo EnemyRecycleField = typeof(PlanetFactory).GetField("enemyRecycle", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static readonly FieldInfo EnemyRecycleCursorField = typeof(PlanetFactory).GetField("enemyRecycleCursor", BindingFlags.Instance | BindingFlags.NonPublic);
 
         internal static void ClearCurrentPlanetDarkFog()
         {
@@ -47,8 +51,6 @@ namespace HardFog
                 ClearGroundBuildingsForBase(planetFactory, combatStatsBuffer, baseId);
             }
 
-            ClearResidualGroundEnemies(planetFactory, combatStatsBuffer, includeBaseCores: false);
-
             foreach (int baseId in baseIds)
             {
                 ReturnRelaysTargetingGroundBase(planet, baseId);
@@ -56,7 +58,7 @@ namespace HardFog
             }
 
             ReturnRelaysTargetingPlanet(planet);
-            ClearResidualGroundEnemies(planetFactory, combatStatsBuffer, includeBaseCores: true);
+            ClearGroundEnemiesLikeUxAssist(planet, planetFactory, combatStatsBuffer);
             ClearGroundWreckage(planet);
             ClearDarkFogAssaultTips();
 
@@ -176,41 +178,146 @@ namespace HardFog
             }
         }
 
-        private static void ClearResidualGroundEnemies(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, bool includeBaseCores)
+        private static void ClearGroundEnemiesLikeUxAssist(PlanetData planet, PlanetFactory planetFactory, CombatStat[] combatStatsBuffer)
         {
-            List<int> enemyIds = new List<int>();
-            for (int i = planetFactory.enemyCursor - 1; i > 0; i--)
+            if (planetFactory.enemyPool != null)
             {
-                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
-                if (enemyData.id == i && (includeBaseCores || enemyData.dfGBaseId <= 0))
+                for (int i = planetFactory.enemyCursor - 1; i > 0; i--)
                 {
-                    enemyIds.Add(i);
+                    if (planetFactory.enemyPool[i].id != i)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        RemoveGroundEnemyCombatStat(planetFactory, combatStatsBuffer, i);
+                        LogInfo("UXAssist-style KillEnemyFinally -> enemyData.id: " + i);
+                        planetFactory.KillEnemyFinally(i, ref CombatStat.empty);
+                    }
+                    catch (Exception)
+                    {
+                        LogInfo("error to UXAssist-style kill enemy " + i);
+                    }
+
+                    if (i >= planetFactory.enemyCursor || planetFactory.enemyPool[i].id != i)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        RemoveGroundEnemyCombatStat(planetFactory, combatStatsBuffer, i);
+                        LogInfo("UXAssist-style RemoveEnemyWithComponents -> enemyData.id: " + i);
+                        planetFactory.RemoveEnemyWithComponents(i);
+                    }
+                    catch (Exception)
+                    {
+                        LogInfo("error to UXAssist-style remove enemy " + i);
+                        ClearGroundEnemySlotFallback(planetFactory, i);
+                    }
                 }
             }
 
-            foreach (int enemyId in enemyIds)
+            ResetGroundEnemyPool(planetFactory);
+            ResetGroundEnemySystem(planet, planetFactory);
+            ResetLocalGroundEnemyRenderers(planet, planetFactory);
+        }
+
+        private static void ResetGroundEnemyPool(PlanetFactory planetFactory)
+        {
+            if (EnemyCapacityField == null || EnemyRecycleField == null || EnemyRecycleCursorField == null)
             {
-                if (enemyId <= 0 || enemyId >= planetFactory.enemyCursor || planetFactory.enemyPool[enemyId].id != enemyId)
+                LogInfo("error to reset ground enemy pool: missing private PlanetFactory enemy fields");
+                return;
+            }
+
+            int capacity = planetFactory.gameData.gameDesc.isCombatMode ? 1024 : 32;
+            planetFactory.enemyPool = new EnemyData[capacity];
+            planetFactory.enemyAnimPool = new AnimData[capacity];
+            planetFactory.enemyCursor = 1;
+            EnemyCapacityField.SetValue(planetFactory, capacity);
+            EnemyRecycleField.SetValue(planetFactory, new int[capacity]);
+            EnemyRecycleCursorField.SetValue(planetFactory, 0);
+        }
+
+        private static void ResetGroundEnemySystem(PlanetData planet, PlanetFactory planetFactory)
+        {
+            try
+            {
+                planetFactory.enemySystem?.Free();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to free ground enemy system");
+            }
+
+            planetFactory.enemySystem = new EnemyDFGroundSystem(planet);
+
+            try
+            {
+                planetFactory.enemySystem.RefreshPlanetReformState();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to refresh planet reform state after ground enemy reset");
+            }
+        }
+
+        private static void ResetLocalGroundEnemyRenderers(PlanetData planet, PlanetFactory planetFactory)
+        {
+            FactoryModel factoryModel = planet?.factoryModel;
+            if (factoryModel == null)
+            {
+                return;
+            }
+
+            try
+            {
+                factoryModel.dfGroundRenderer?.Free();
+                factoryModel.dfGroundRenderer = new EnemyDFGroundRenderer
                 {
-                    continue;
+                    enemySystem = planetFactory.enemySystem
+                };
+                factoryModel.dfGroundRenderer.Init();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to reset ground enemy renderer");
+            }
+
+            try
+            {
+                if (factoryModel.dfFormRenderers != null)
+                {
+                    foreach (EnemyFormationRenderer renderer in factoryModel.dfFormRenderers)
+                    {
+                        if (renderer == null)
+                        {
+                            continue;
+                        }
+
+                        renderer.unitCount = 0;
+                        renderer.stateCursor = 0;
+                        renderer.groupCursor = 0;
+                    }
                 }
 
-                try
-                {
-                    RemoveGroundEnemyCombatStat(planetFactory, combatStatsBuffer, enemyId);
-                    LogInfo("RemoveEnemyWithComponents -> enemyData.id: " + enemyId);
-                    planetFactory.RemoveEnemyWithComponents(enemyId);
-                }
-                catch (Exception)
-                {
-                    LogInfo("error to remove residual enemy " + enemyId);
-                    ClearGroundEnemySlotFallback(planetFactory, enemyId);
-                }
+                factoryModel.FreeEnemyAnimBuffer();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to clear ground enemy formation renderers");
             }
         }
 
         private static void RemoveGroundEnemyCombatStat(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
         {
+            if (combatStatsBuffer == null)
+            {
+                return;
+            }
+
             ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
             int combatStatId = enemyData.combatStatId;
             if (combatStatId > 0 && combatStatId < combatStatsBuffer.Length && combatStatsBuffer[combatStatId].id == combatStatId)
@@ -457,7 +564,7 @@ namespace HardFog
             for (int i = hive.relays.cursor - 1; i > 0; i--)
             {
                 DFRelayComponent relay = hive.relays.buffer[i];
-                if (relay == null || relay.id != i || relay.targetAstroId != planetAstroId)
+                if (relay == null || relay.id != i || (relay.targetAstroId != planetAstroId && relay.searchAstroId != planetAstroId))
                 {
                     continue;
                 }
@@ -480,10 +587,14 @@ namespace HardFog
         {
             if (relay.direction < 0)
             {
+                relay.searchAstroId = 0;
+                relay.ResetSearchStates();
+                relay.ResetTargetedMarker();
                 return false;
             }
 
             LogInfo("return relay -> relay.id: " + relay.id + ", enemyId: " + relay.enemyId);
+            relay.searchAstroId = 0;
 
             if (relay.stage == 2)
             {

@@ -1,5 +1,10 @@
 # 更新日志
 
+## 0.0.23
+
+- Fixed current planet Dark Fog ground cleanup leaving residual non-interactive enemy visuals by adding a final enemy pool, ground enemy system, and renderer reset after relays are returned.
+- Relay return now also clears relays that are searching the current planet, not only relays already targeting it.
+
 ## 0.0.22
 
 - 新增更快中继站发射选项：中继站需求检查每120个巢穴tick运行一次，非气态目标行星均匀获得派遣机会。

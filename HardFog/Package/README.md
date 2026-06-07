@@ -4,7 +4,7 @@ HardFog adds a UXAssist configuration tab for Dark Fog cleanup tools and several
 
 ## Features
 
-- Clear Dark Fog ground bases on the current planet, returning relay stations instead of destroying them and leaving cleared base pits as ownerless ruins.
+- Clear Dark Fog ground bases on the current planet, returning relay stations instead of destroying them, resetting residual ground enemy state, and leaving cleared base pits as ownerless ruins.
 - Clear space Dark Fog hives in the current star system.
 - Fill the galaxy with Dark Fog hives.
 - Generate Dark Fog surface ruins on the current planet.
