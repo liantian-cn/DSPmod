@@ -1,5 +1,10 @@
 # 更新日志 / Changelog
 
+## 0.0.24
+
+- Fixed a crash in `FactoryModel.DrawInstancedBatches` after clearing current planet Dark Fog by no longer freeing the factory enemy animation buffer.
+- Narrowed the final current-planet Dark Fog cleanup so it clears residual ground enemy component and renderer state without reinitializing the planet or replacing the factory enemy pool.
+
 ## 0.0.23
 
 - 修复当前星球黑雾地面清理后残留不可交互敌人视觉的问题：中继站归还后，最终清理敌人池、地面敌人系统和渲染器。

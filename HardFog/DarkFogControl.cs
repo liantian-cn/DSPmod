@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using BepInEx.Logging;
 
 namespace HardFog
@@ -9,9 +8,6 @@ namespace HardFog
     internal static class DarkFogControl
     {
         internal static ManualLogSource Log;
-        private static readonly FieldInfo EnemyCapacityField = typeof(PlanetFactory).GetField("enemyCapacity", BindingFlags.Instance | BindingFlags.NonPublic);
-        private static readonly FieldInfo EnemyRecycleField = typeof(PlanetFactory).GetField("enemyRecycle", BindingFlags.Instance | BindingFlags.NonPublic);
-        private static readonly FieldInfo EnemyRecycleCursorField = typeof(PlanetFactory).GetField("enemyRecycleCursor", BindingFlags.Instance | BindingFlags.NonPublic);
 
         internal static void ClearCurrentPlanetDarkFog()
         {
@@ -219,52 +215,80 @@ namespace HardFog
                 }
             }
 
-            ResetGroundEnemyPool(planetFactory);
-            ResetGroundEnemySystem(planet, planetFactory);
-            ResetLocalGroundEnemyRenderers(planet, planetFactory);
+            ClearGroundEnemyAnimationData(planetFactory);
+            ResetGroundEnemyComponentPools(planetFactory);
+            ClearLocalGroundEnemyRenderers(planet, planetFactory);
         }
 
-        private static void ResetGroundEnemyPool(PlanetFactory planetFactory)
+        private static void ClearGroundEnemyAnimationData(PlanetFactory planetFactory)
         {
-            if (EnemyCapacityField == null || EnemyRecycleField == null || EnemyRecycleCursorField == null)
+            if (planetFactory.enemyAnimPool == null)
             {
-                LogInfo("error to reset ground enemy pool: missing private PlanetFactory enemy fields");
                 return;
             }
 
-            int capacity = planetFactory.gameData.gameDesc.isCombatMode ? 1024 : 32;
-            planetFactory.enemyPool = new EnemyData[capacity];
-            planetFactory.enemyAnimPool = new AnimData[capacity];
-            planetFactory.enemyCursor = 1;
-            EnemyCapacityField.SetValue(planetFactory, capacity);
-            EnemyRecycleField.SetValue(planetFactory, new int[capacity]);
-            EnemyRecycleCursorField.SetValue(planetFactory, 0);
+            Array.Clear(planetFactory.enemyAnimPool, 0, Math.Min(planetFactory.enemyCursor, planetFactory.enemyAnimPool.Length));
         }
 
-        private static void ResetGroundEnemySystem(PlanetData planet, PlanetFactory planetFactory)
+        private static void ResetGroundEnemyComponentPools(PlanetFactory planetFactory)
+        {
+            EnemyDFGroundSystem enemySystem = planetFactory.enemySystem;
+            if (enemySystem == null)
+            {
+                return;
+            }
+
+            ResetDataPool(ref enemySystem.builders, "enemy builders");
+            ResetObjectPool(ref enemySystem.bases, "DFG bases");
+            ResetDataPool(ref enemySystem.connectors, "DFG connectors");
+            ResetDataPool(ref enemySystem.replicators, "DFG replicators");
+            ResetDataPool(ref enemySystem.turrets, "DFG turrets");
+            ResetDataPool(ref enemySystem.shields, "DFG shields");
+            ResetDataPool(ref enemySystem.units, "enemy units");
+            enemySystem.truckSegments = null;
+        }
+
+        private static void ResetDataPool<T>(ref DataPool<T> pool, string name)
+            where T : struct, IPoolElement
         {
             try
             {
-                planetFactory.enemySystem?.Free();
+                if (pool == null)
+                {
+                    pool = new DataPool<T>();
+                }
+
+                pool.Reset();
             }
             catch (Exception)
             {
-                LogInfo("error to free ground enemy system");
-            }
-
-            planetFactory.enemySystem = new EnemyDFGroundSystem(planet);
-
-            try
-            {
-                planetFactory.enemySystem.RefreshPlanetReformState();
-            }
-            catch (Exception)
-            {
-                LogInfo("error to refresh planet reform state after ground enemy reset");
+                LogInfo("error to reset " + name);
+                pool = new DataPool<T>();
+                pool.Reset();
             }
         }
 
-        private static void ResetLocalGroundEnemyRenderers(PlanetData planet, PlanetFactory planetFactory)
+        private static void ResetObjectPool<T>(ref ObjectPool<T> pool, string name)
+            where T : class, IPoolElement, new()
+        {
+            try
+            {
+                if (pool == null)
+                {
+                    pool = new ObjectPool<T>();
+                }
+
+                pool.Reset();
+            }
+            catch (Exception)
+            {
+                LogInfo("error to reset " + name);
+                pool = new ObjectPool<T>();
+                pool.Reset();
+            }
+        }
+
+        private static void ClearLocalGroundEnemyRenderers(PlanetData planet, PlanetFactory planetFactory)
         {
             FactoryModel factoryModel = planet?.factoryModel;
             if (factoryModel == null)
@@ -274,16 +298,19 @@ namespace HardFog
 
             try
             {
-                factoryModel.dfGroundRenderer?.Free();
-                factoryModel.dfGroundRenderer = new EnemyDFGroundRenderer
+                if (factoryModel.dfGroundRenderer != null)
                 {
-                    enemySystem = planetFactory.enemySystem
-                };
-                factoryModel.dfGroundRenderer.Init();
+                    factoryModel.dfGroundRenderer.enemySystem = planetFactory.enemySystem;
+                    factoryModel.dfGroundRenderer.truckSegments = null;
+                    if (factoryModel.dfGroundRenderer.builderArr != null)
+                    {
+                        Array.Clear(factoryModel.dfGroundRenderer.builderArr, 0, factoryModel.dfGroundRenderer.builderArr.Length);
+                    }
+                }
             }
             catch (Exception)
             {
-                LogInfo("error to reset ground enemy renderer");
+                LogInfo("error to clear ground enemy renderer");
             }
 
             try
@@ -302,8 +329,6 @@ namespace HardFog
                         renderer.groupCursor = 0;
                     }
                 }
-
-                factoryModel.FreeEnemyAnimBuffer();
             }
             catch (Exception)
             {
