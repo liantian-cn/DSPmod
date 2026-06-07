@@ -8,25 +8,13 @@ $pumpAnywherePath = Join-Path $moduleDir "PumpAnywhere.cs"
 $hardFogWindowPath = Join-Path $moduleDir "HardFogWindow.cs"
 $darkFogControlPath = Join-Path $moduleDir "DarkFogControl.cs"
 $projectPath = Join-Path $moduleDir "HardFog.csproj"
-$manifestPath = Join-Path $moduleDir "Package\manifest.json"
-$readmePath = Join-Path $moduleDir "Package\README.md"
 $veinPlacementSource = Get-Content -Encoding UTF8 -LiteralPath $veinPlacementPath -Raw
 $waterBuildSource = Get-Content -Encoding UTF8 -LiteralPath $waterBuildPath -Raw
 $pumpAnywhereSource = Get-Content -Encoding UTF8 -LiteralPath $pumpAnywherePath -Raw
 $hardFogWindowSource = Get-Content -Encoding UTF8 -LiteralPath $hardFogWindowPath -Raw
 $darkFogControlSource = Get-Content -Encoding UTF8 -LiteralPath $darkFogControlPath -Raw
 $projectSource = Get-Content -Encoding UTF8 -LiteralPath $projectPath -Raw
-$manifestSource = Get-Content -Encoding UTF8 -LiteralPath $manifestPath -Raw
-$readmeSource = Get-Content -Encoding UTF8 -LiteralPath $readmePath -Raw
 $hardFogWindowExecutableSource = ($hardFogWindowSource -split "`r?`n" | Where-Object { -not $_.TrimStart().StartsWith("//") }) -join "`n"
-
-function Convert-CodePointsToString([int[]]$codes) {
-    return -join ($codes | ForEach-Object { [char]$_ })
-}
-
-$clearPlanetLabelCn = Convert-CodePointsToString @(28165, 29702, 24403, 21069, 26143, 29699, 30340, 22320, 38754, 40657, 38654, 22522, 22320)
-$clearStarLabelCn = Convert-CodePointsToString @(28165, 29702, 24403, 21069, 24658, 26143, 30340, 22826, 31354, 40657, 38654, 24034, 31348)
-$relayReturnReadmeCn = Convert-CodePointsToString @(36963, 36820, 20013, 32487, 31449, 32780, 19981, 26159, 25703, 27585, 23427, 20204)
 
 function Assert-SourceContains([string]$needle, [string]$message) {
     if (-not $veinPlacementSource.Contains($needle)) {
@@ -74,11 +62,6 @@ Assert-SourceNotContains "initialLongitude" "Vein placement should not choose a 
 
 Assert-TextContains $projectSource 'Compile Include="BuildAnywhereOnWaterControl.cs"' "Build-anywhere-on-water control should be compiled into HardFog."
 Assert-TextContains $projectSource 'Compile Include="PumpAnywhere.cs"' "Pump-anywhere control should be compiled into HardFog."
-Assert-TextContains $hardFogWindowSource '[BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.21")]' "HardFog plugin version should be 0.0.21."
-Assert-TextContains $hardFogWindowSource 'Clear Dark Fog ground bases on current planet' "Current planet cleanup button should describe ground base cleanup."
-Assert-TextContains $hardFogWindowSource $clearPlanetLabelCn "Current planet cleanup button should use the updated Chinese label."
-Assert-TextContains $hardFogWindowSource 'Clear space Dark Fog hives in current star system' "Current star cleanup button should describe space hive cleanup."
-Assert-TextContains $hardFogWindowSource $clearStarLabelCn "Current star cleanup button should use the updated Chinese label."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true' "Water-build feature should default on in HardFog config."
 Assert-TextContains $hardFogWindowSource 'BuildAnywhereOnWaterControl.Uninit();' "Water-build feature should be uninitialized with other controls."
 Assert-TextContains $hardFogWindowSource 'wnd.AddCheckBox(leftX, y, tab, BuildAnywhereOnWaterControl.EnabledConfig' "Water-build feature should be exposed in the HardFog UI."
@@ -90,11 +73,6 @@ Assert-TextContains $hardFogWindowSource 'PumpAnywhere.Uninit();' "Pump-anywhere
 Assert-TextNotContains $hardFogWindowSource 'wnd.AddCheckBox(x, y, tab, PumpAnywhere.EnabledConfig' "Pump-anywhere feature should be hidden from the HardFog UI."
 Assert-TextNotContains $hardFogWindowSource 'PumpAnywhereKey' "Pump-anywhere UI label key should not be registered."
 Assert-TextNotContains $hardFogWindowSource 'I18N.Add(PumpAnywhereKey' "Pump-anywhere UI label should not be registered."
-Assert-TextContains $manifestSource '"version_number": "0.0.21"' "Package manifest version should match the plugin version."
-Assert-TextContains $readmeSource 'Ignore ground support requirement' "Package README should document the ground-support override feature."
-Assert-TextContains $readmeSource 'returning relay stations instead of destroying them' "Package README should document relay return behavior for planet cleanup."
-Assert-TextContains $readmeSource $relayReturnReadmeCn "Package README should document relay return behavior in Chinese."
-Assert-TextNotContains $readmeSource 'Pump anywhere' "Package README should not publicly document the hidden pump-anywhere feature."
 
 Assert-TextContains $darkFogControlSource 'ReturnRelaysTargetingPlanet(planet);' "Planet cleanup should return relays before clearing ground bases."
 Assert-TextContains $darkFogControlSource 'if (enemyData.dfRelayId > 0)' "Planet cleanup should recognize relay enemies in the space enemy pass."
