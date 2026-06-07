@@ -1,3 +1,17 @@
+// ═══════════════════════════════════════════════════════════════
+// DEPRECATED — 已弃用 — 仅保留作为学习参考（幽灵代码）
+//
+// 该功能已被 SuperThreatReducerControl 取代。
+// SuperThreatReducerControl 提供两个独立开关(太空/地面)，
+// 且使用 Harmony Prefix/Postfix 直接跳过重型运算，
+// 性能远优于本文件的 ×0.999 乘法衰减。
+//
+// 本文件不再被编译(.csproj 中已注释)、不再在 UI 中显示。
+//
+// This file is superseded by SuperThreatReducerControl.
+// Kept for reference only — not compiled or activated.
+// ═══════════════════════════════════════════════════════════════
+
 using System;
 using BepInEx.Configuration;
 using BepInEx.Logging;
