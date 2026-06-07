@@ -100,6 +100,11 @@ Assert-TextContains $darkFogControlSource 'skip relay -> enemyData.id' "Planet c
 Assert-TextContains $darkFogControlSource 'private static bool ReturnRelay(DFRelayComponent relay)' "Planet cleanup should centralize relay return state changes."
 Assert-TextContains $darkFogControlSource 'relay.LeaveBase();' "Landed relays should use the game relay leave-base behavior."
 Assert-TextContains $darkFogControlSource 'relay.direction = -1;' "Targeted relays should be put into return direction."
+Assert-TextContains $darkFogControlSource 'RemoveResidualGroundBaseRecords(planetFactory, bases);' "Planet cleanup should remove residual ground base records after killing ground enemies."
+Assert-TextContains $darkFogControlSource 'private static void RemoveResidualGroundBaseRecords(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases)' "Planet cleanup should centralize residual ground base record removal."
+Assert-TextContains $darkFogControlSource 'ClearRelaysTargetingGroundBase(planetFactory.planet, baseId);' "Ground base record removal should clear relay references before removing the base record."
+Assert-TextContains $darkFogControlSource 'planetFactory.RemoveEnemyWithComponents(enemyId);' "Residual ground base records should be removed through enemy component cleanup when their core enemy remains."
+Assert-TextNotContains $darkFogControlSource 'RemoveRuinWithComponet' "Planet cleanup should not delete surface ruins when removing residual ground base records."
 
 Assert-TextContains $fasterRelayLaunchSource 'private const int VanillaRelayDemandInterval = 600;' "Faster relay launch control should document the vanilla relay demand interval."
 Assert-TextContains $fasterRelayLaunchSource 'private const int FasterRelayDemandInterval = 120;' "Faster relay launch control should use a 120 hive tick relay demand interval."

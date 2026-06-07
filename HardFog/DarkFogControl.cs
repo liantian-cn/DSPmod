@@ -76,6 +76,8 @@ namespace HardFog
                 }
             }
 
+            RemoveResidualGroundBaseRecords(planetFactory, bases);
+
             SpaceSector spaceSector = GameMain.spaceSector;
 
             for (var i = spaceSector.enemyCursor - 1; i > 0; i--)
@@ -99,6 +101,108 @@ namespace HardFog
 
                 LogInfo("KillEnemyFinal -> enemyData.id: " + enemyData.id);
                 spaceSector.KillEnemyFinal(enemyData.id, ref CombatStat.empty);
+            }
+        }
+
+        private static void RemoveResidualGroundBaseRecords(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases)
+        {
+            if (planetFactory == null || bases == null || bases.buffer == null)
+            {
+                return;
+            }
+
+            List<int> baseIds = new List<int>();
+            for (int i = 1; i < bases.cursor; i++)
+            {
+                DFGBaseComponent baseComponent = bases.buffer[i];
+                if (baseComponent != null && baseComponent.id == i)
+                {
+                    baseIds.Add(i);
+                }
+            }
+
+            foreach (int baseId in baseIds)
+            {
+                if (baseId <= 0 || baseId >= bases.cursor)
+                {
+                    continue;
+                }
+
+                DFGBaseComponent baseComponent = bases.buffer[baseId];
+                if (baseComponent == null || baseComponent.id != baseId)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    RemoveResidualGroundBaseRecord(planetFactory, baseComponent);
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to remove DFGBaseComponent " + baseId);
+                }
+            }
+        }
+
+        private static void RemoveResidualGroundBaseRecord(PlanetFactory planetFactory, DFGBaseComponent baseComponent)
+        {
+            int baseId = baseComponent.id;
+            int enemyId = baseComponent.enemyId;
+            LogInfo("remove DFGBaseComponent -> base.id: " + baseId + ", enemyId: " + enemyId + ", ruinId: " + baseComponent.ruinId);
+
+            ClearRelaysTargetingGroundBase(planetFactory.planet, baseId);
+
+            if (enemyId > 0 && enemyId < planetFactory.enemyCursor && planetFactory.enemyPool[enemyId].id == enemyId)
+            {
+                planetFactory.RemoveEnemyWithComponents(enemyId);
+                return;
+            }
+
+            if (planetFactory.platformSystem != null)
+            {
+                planetFactory.platformSystem.RemoveStateArea((uint)(0x1000000uL | (ulong)baseId));
+            }
+
+            planetFactory.enemySystem.RemoveDFGBaseComponent(baseId);
+        }
+
+        private static void ClearRelaysTargetingGroundBase(PlanetData planet, int baseId)
+        {
+            if (planet == null || planet.star == null || GameMain.spaceSector == null)
+            {
+                return;
+            }
+
+            EnemyDFHiveSystem hive = GameMain.spaceSector.dfHives[planet.star.index];
+            while (hive != null)
+            {
+                ClearRelaysTargetingGroundBase(hive, planet.astroId, baseId);
+                hive = hive.nextSibling;
+            }
+        }
+
+        private static void ClearRelaysTargetingGroundBase(EnemyDFHiveSystem hive, int planetAstroId, int baseId)
+        {
+            if (hive == null || hive.relays == null)
+            {
+                return;
+            }
+
+            for (int i = hive.relays.cursor - 1; i > 0; i--)
+            {
+                DFRelayComponent relay = hive.relays.buffer[i];
+                if (relay == null || relay.id != i || relay.targetAstroId != planetAstroId || relay.baseId != baseId)
+                {
+                    continue;
+                }
+
+                LogInfo("clear relay ground base reference -> relay.id: " + relay.id + ", baseId: " + baseId);
+                relay.ClearBaseReferences();
+                relay.baseId = 0;
+                relay.baseState = 0;
+                relay.baseTicks = 0;
+                relay.baseRespawnCD = 0;
             }
         }
 
