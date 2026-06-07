@@ -68,3 +68,5 @@ SurfaceRuins/output.csv
 /Harmony
 /UXAssist
 /CheatEnabler
+*.pyc
+/.vscode
