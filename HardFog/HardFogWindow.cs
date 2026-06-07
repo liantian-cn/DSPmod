@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.18")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.19")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -15,7 +15,8 @@ namespace HardFog
         private const string ClearCurrentPlanetKey = "clear_current_planet";
         private const string ClearCurrentStarKey = "clear_current_star";
         private const string FillGalaxyHivesKey = "fill_hive";
-        private const string FogThreatDampenerKey = "fog-threat-dampener-enabled";
+        private const string SuperThreatReducerHiveKey = "super-threat-reducer-hive-enabled";
+        private const string SuperThreatReducerGroundKey = "super-threat-reducer-ground-enabled";
         private const string SmartRelayDispatchKey = "smart-relay-dispatch-enabled";
         private const string FasterResearchKey = "faster-research-enabled";
         private const string BuildAnywhereOnWaterKey = "build-anywhere-on-water-enabled";
@@ -41,7 +42,10 @@ namespace HardFog
             Log = Logger;
             DarkFogControl.Log = Logger;
             SurfaceRuinControl.Log = Logger;
-            FogThreatDampenerControl.Init(Config.Bind("DarkFog", "FogThreatDampenerEnabled", false, "Enable Dark Fog Pressure Reducer. Reduces non-active hive threat by 1% every 30 hive ticks."), Logger);
+            SuperThreatReducerControl.Init(
+                Config.Bind("DarkFog", "SuperThreatReducerHiveEnabled", false, "Enable Space Hive Suppression. Zeros space hive threat and skips assault scans."),
+                Config.Bind("DarkFog", "SuperThreatReducerGroundEnabled", false, "Enable Ground Base Suppression. Skips ground base threat accumulation and assault scans."),
+                Logger);
             SmartRelayDispatchControl.Init(Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Enable relay station dispatch only to markers."), Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
@@ -53,7 +57,8 @@ namespace HardFog
             I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog on current planet", "清理当前星球的黑雾");
             I18N.Add(ClearCurrentStarKey, "Clear space Dark Fog in current star system", "清理当前恒星的太空黑雾");
             I18N.Add(FillGalaxyHivesKey, "Fill the galaxy with Dark Fog hives", "为整个星系填满黑雾巢穴");
-            I18N.Add(FogThreatDampenerKey, "Dark Fog Pressure Reducer", "黑雾降压器");
+            I18N.Add(SuperThreatReducerHiveKey, "Space Hive Suppression", "太空巢穴降压");
+            I18N.Add(SuperThreatReducerGroundKey, "Ground Base Suppression", "地面基地降压");
             I18N.Add(SmartRelayDispatchKey, "Relay stations only dispatch to markers", "中继站只发往信标");
             I18N.Add(FasterResearchKey, "Research Speed Multiplier", "研究倍速器");
             I18N.Add(VeinPlacementKey, "Better vein placement", "更好的矿物位置");
@@ -72,7 +77,7 @@ namespace HardFog
         public void OnDestroy()
         {
             MyConfigWindow.OnUICreated -= CreateUI;
-            FogThreatDampenerControl.Uninit();
+            SuperThreatReducerControl.Uninit();
             SmartRelayDispatchControl.Uninit();
             FasterResearchControl.Uninit();
             BuildAnywhereOnWaterControl.Uninit();
@@ -96,7 +101,9 @@ namespace HardFog
             y += 36f;
             fillGalaxyHivesButton = wnd.AddButton(x, y, 240, tab, FillGalaxyHivesKey, 16, "button-fill-galaxy-dark-fog-hives", OnFillGalaxyHivesClicked);
             y += 36f;
-            wnd.AddCheckBox(x, y, tab, FogThreatDampenerControl.EnabledConfig, FogThreatDampenerKey, 16);
+            wnd.AddCheckBox(x, y, tab, SuperThreatReducerControl.EnabledConfigHive, SuperThreatReducerHiveKey, 16);
+            y += 36f;
+            wnd.AddCheckBox(x, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
             y += 36f;
             wnd.AddCheckBox(x, y, tab, SmartRelayDispatchControl.EnabledConfig, SmartRelayDispatchKey, 16);
             y += 36f;
