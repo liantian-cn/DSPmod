@@ -35,38 +35,25 @@ namespace HardFog
             PlanetFactory planetFactory = GameMain.data.GetOrCreateFactory(planet);
             CombatStat[] combatStatsBuffer = planetFactory.skillSystem.combatStats.buffer;
             ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
+            List<int> baseIds = CollectGroundBaseIds(bases);
+
+            foreach (int baseId in baseIds)
+            {
+                ClearGroundUnitsForBase(planetFactory, combatStatsBuffer, baseId);
+            }
+
+            foreach (int baseId in baseIds)
+            {
+                ClearGroundBuildingsForBase(planetFactory, combatStatsBuffer, baseId);
+            }
+
+            foreach (int baseId in baseIds)
+            {
+                ReturnRelaysTargetingGroundBase(planet, baseId);
+                RemoveResidualGroundBaseRecord(planetFactory, bases, baseId);
+            }
 
             ReturnRelaysTargetingPlanet(planet);
-
-            for (int i = 1; i < bases.cursor; i++)
-            {
-                DFGBaseComponent baseComponent = bases.buffer[i];
-                if (baseComponent == null)
-                {
-                    continue;
-                }
-
-                ClearGroundBaseFormations(baseComponent);
-            }
-
-            for (var i = planetFactory.enemyCursor - 1; i > 0; i--)
-            {
-                if (planetFactory.enemyPool[i].id != i)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    ClearGroundEnemy(planetFactory, combatStatsBuffer, i);
-                }
-                catch (Exception)
-                {
-                    LogInfo("error to clear enemy " + i);
-                }
-            }
-
-            RemoveResidualGroundBaseRecords(planetFactory, bases);
 
             SpaceSector spaceSector = GameMain.spaceSector;
 
@@ -94,36 +81,14 @@ namespace HardFog
             }
         }
 
-        private static void ClearGroundEnemy(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
+        private static List<int> CollectGroundBaseIds(ObjectPool<DFGBaseComponent> bases)
         {
-            ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
-            int combatStatId = enemyData.combatStatId;
-            if (combatStatId > 0)
-            {
-                planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
-                planetFactory.skillSystem.combatStats.Remove(combatStatId);
-                enemyData.combatStatId = 0;
-            }
-
-            if (enemyData.dynamic)
-            {
-                LogInfo("RemoveEnemyWithComponents -> enemyData.id: " + enemyData.id);
-                planetFactory.RemoveEnemyWithComponents(enemyId);
-                return;
-            }
-
-            LogInfo("KillEnemyFinally -> enemyData.id: " + enemyData.id);
-            planetFactory.KillEnemyFinally(enemyId, ref CombatStat.empty);
-        }
-
-        private static void RemoveResidualGroundBaseRecords(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases)
-        {
-            if (planetFactory == null || bases == null || bases.buffer == null)
-            {
-                return;
-            }
-
             List<int> baseIds = new List<int>();
+            if (bases == null || bases.buffer == null)
+            {
+                return baseIds;
+            }
+
             for (int i = 1; i < bases.cursor; i++)
             {
                 DFGBaseComponent baseComponent = bases.buffer[i];
@@ -133,53 +98,146 @@ namespace HardFog
                 }
             }
 
-            foreach (int baseId in baseIds)
+            return baseIds;
+        }
+
+        private static void ClearGroundUnitsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
+        {
+            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: true, coreLast: false))
             {
-                if (baseId <= 0 || baseId >= bases.cursor)
-                {
-                    continue;
-                }
+                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
+            }
 
-                DFGBaseComponent baseComponent = bases.buffer[baseId];
-                if (baseComponent == null || baseComponent.id != baseId)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    RemoveResidualGroundBaseRecord(planetFactory, baseComponent);
-                }
-                catch (Exception)
-                {
-                    LogInfo("error to remove DFGBaseComponent " + baseId);
-                }
+            DFGBaseComponent baseComponent = GetGroundBase(planetFactory, baseId);
+            if (baseComponent != null)
+            {
+                ClearGroundBaseFormations(baseComponent);
             }
         }
 
-        private static void RemoveResidualGroundBaseRecord(PlanetFactory planetFactory, DFGBaseComponent baseComponent)
+        private static void ClearGroundBuildingsForBase(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int baseId)
         {
-            int baseId = baseComponent.id;
-            int enemyId = baseComponent.enemyId;
-            LogInfo("remove DFGBaseComponent -> base.id: " + baseId + ", enemyId: " + enemyId + ", ruinId: " + baseComponent.ruinId);
-
-            ClearRelaysTargetingGroundBase(planetFactory.planet, baseId);
-
-            if (enemyId > 0 && enemyId < planetFactory.enemyCursor && planetFactory.enemyPool[enemyId].id == enemyId)
+            foreach (int enemyId in CollectBaseEnemyIds(planetFactory, baseId, dynamicOnly: false, coreLast: true))
             {
-                planetFactory.RemoveEnemyWithComponents(enemyId);
+                ClearGroundEnemyFinally(planetFactory, combatStatsBuffer, enemyId);
+            }
+        }
+
+        private static List<int> CollectBaseEnemyIds(PlanetFactory planetFactory, int baseId, bool dynamicOnly, bool coreLast)
+        {
+            List<int> enemyIds = new List<int>();
+            int baseCoreEnemyId = 0;
+            for (int i = 1; i < planetFactory.enemyCursor; i++)
+            {
+                ref EnemyData enemyData = ref planetFactory.enemyPool[i];
+                if (enemyData.id != i || enemyData.owner != baseId || enemyData.dynamic != dynamicOnly)
+                {
+                    continue;
+                }
+
+                if (coreLast && enemyData.dfGBaseId == baseId)
+                {
+                    baseCoreEnemyId = i;
+                    continue;
+                }
+
+                enemyIds.Add(i);
+            }
+
+            if (baseCoreEnemyId > 0)
+            {
+                enemyIds.Add(baseCoreEnemyId);
+            }
+
+            return enemyIds;
+        }
+
+        private static void ClearGroundEnemyFinally(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
+        {
+            if (enemyId <= 0 || enemyId >= planetFactory.enemyCursor || planetFactory.enemyPool[enemyId].id != enemyId)
+            {
                 return;
             }
 
-            if (planetFactory.platformSystem != null)
+            try
             {
-                planetFactory.platformSystem.RemoveStateArea((uint)(0x1000000uL | (ulong)baseId));
+                RemoveGroundEnemyCombatStat(planetFactory, combatStatsBuffer, enemyId);
+                LogInfo("KillEnemyFinally -> enemyData.id: " + enemyId);
+                planetFactory.KillEnemyFinally(enemyId, ref CombatStat.empty);
             }
-
-            planetFactory.enemySystem.RemoveDFGBaseComponent(baseId);
+            catch (Exception)
+            {
+                LogInfo("error to kill enemy " + enemyId);
+            }
         }
 
-        private static void ClearRelaysTargetingGroundBase(PlanetData planet, int baseId)
+        private static void RemoveGroundEnemyCombatStat(PlanetFactory planetFactory, CombatStat[] combatStatsBuffer, int enemyId)
+        {
+            ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
+            int combatStatId = enemyData.combatStatId;
+            if (combatStatId > 0)
+            {
+                planetFactory.skillSystem.OnRemovingSkillTarget(combatStatId, combatStatsBuffer[combatStatId].originAstroId, ETargetType.CombatStat);
+                planetFactory.skillSystem.combatStats.Remove(combatStatId);
+                enemyData.combatStatId = 0;
+            }
+        }
+
+        private static void RemoveResidualGroundBaseRecord(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases, int baseId)
+        {
+            if (baseId <= 0 || bases == null || bases.buffer == null || baseId >= bases.cursor)
+            {
+                return;
+            }
+
+            DFGBaseComponent baseComponent = bases.buffer[baseId];
+            if (baseComponent == null || baseComponent.id != baseId)
+            {
+                return;
+            }
+
+            try
+            {
+                int enemyId = baseComponent.enemyId;
+                LogInfo("remove DFGBaseComponent -> base.id: " + baseId + ", enemyId: " + enemyId + ", ruinId: " + baseComponent.ruinId);
+
+                if (enemyId > 0 && enemyId < planetFactory.enemyCursor && planetFactory.enemyPool[enemyId].id == enemyId)
+                {
+                    planetFactory.RemoveEnemyWithComponents(enemyId);
+                    return;
+                }
+
+                if (planetFactory.platformSystem != null)
+                {
+                    planetFactory.platformSystem.RemoveStateArea((uint)(0x1000000uL | (ulong)baseId));
+                }
+
+                planetFactory.enemySystem.RemoveDFGBaseComponent(baseId);
+            }
+            catch (Exception)
+            {
+                LogInfo("error to remove DFGBaseComponent " + baseId);
+            }
+        }
+
+        private static DFGBaseComponent GetGroundBase(PlanetFactory planetFactory, int baseId)
+        {
+            ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
+            if (baseId <= 0 || bases == null || bases.buffer == null || baseId >= bases.cursor)
+            {
+                return null;
+            }
+
+            DFGBaseComponent baseComponent = bases.buffer[baseId];
+            if (baseComponent != null && baseComponent.id == baseId)
+            {
+                return baseComponent;
+            }
+
+            return null;
+        }
+
+        private static void ReturnRelaysTargetingGroundBase(PlanetData planet, int baseId)
         {
             if (planet == null || planet.star == null || GameMain.spaceSector == null)
             {
@@ -189,12 +247,12 @@ namespace HardFog
             EnemyDFHiveSystem hive = GameMain.spaceSector.dfHives[planet.star.index];
             while (hive != null)
             {
-                ClearRelaysTargetingGroundBase(hive, planet.astroId, baseId);
+                ReturnRelaysTargetingGroundBase(hive, planet.astroId, baseId);
                 hive = hive.nextSibling;
             }
         }
 
-        private static void ClearRelaysTargetingGroundBase(EnemyDFHiveSystem hive, int planetAstroId, int baseId)
+        private static void ReturnRelaysTargetingGroundBase(EnemyDFHiveSystem hive, int planetAstroId, int baseId)
         {
             if (hive == null || hive.relays == null)
             {
@@ -209,12 +267,17 @@ namespace HardFog
                     continue;
                 }
 
-                LogInfo("clear relay ground base reference -> relay.id: " + relay.id + ", baseId: " + baseId);
-                relay.ClearBaseReferences();
-                relay.baseId = 0;
-                relay.baseState = 0;
-                relay.baseTicks = 0;
-                relay.baseRespawnCD = 0;
+                try
+                {
+                    if (ReturnRelay(relay))
+                    {
+                        hive.relayNeutralizedCounter++;
+                    }
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to return relay " + relay.id);
+                }
             }
         }
 
