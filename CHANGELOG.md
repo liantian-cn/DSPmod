@@ -2,7 +2,8 @@
 
 ## 0.0.24
 
-- Fix Bug
+- 重写当前星球地面黑雾清理：严格按地面单位、非核心建筑、核心、中继站、废墟解绑的顺序使用游戏原生击杀和移除路径，避免残留敌人和损坏组件池。
+- Rewrote current planet ground Dark Fog cleanup to use game-native kill and removal paths in the strict order of units, non-core buildings, cores, relay return, and ruin unlinking, avoiding residual enemies and corrupted component pools.
 
 ## 0.0.23
 
