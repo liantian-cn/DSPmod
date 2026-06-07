@@ -324,7 +324,6 @@ namespace HardFog
         }
 
         // 检查兄弟巢穴的中继是否已经锁定了同一坐标（避免多个中继抢同一个候选）。
-        // 需要同时检查 targetLPos（飞行/降落阶段）和 searchLPos（刚刚完成搜索但 targetLPos 尚未被 RelaySailLogic 设置的窗口期）。
         private static bool IsCandidateTargetedByOtherRelay(
             EnemyDFHiveSystem hive,
             int astroId,
@@ -338,26 +337,14 @@ namespace HardFog
                 for (int i = 1; i < cursor; i++)
                 {
                     DFRelayComponent relay = buffer[i];
-                    if (relay == null || relay.id != i || relay.direction <= 0)
+                    if (relay != null &&
+                        relay.id == i &&
+                        relay.targetAstroId == astroId &&
+                        relay.direction > 0)
                     {
-                        continue;
-                    }
-
-                    // targetLPos：SearchTargetPlaceProcess 返回后由 RelaySailLogic 立即写入。
-                    if (relay.targetAstroId == astroId)
-                    {
-                        if ((relay.targetLPos - candidate).sqrMagnitude < clearanceSq)
-                        {
-                            return true;
-                        }
-                    }
-
-                    // searchLPos：我们的 Prefix 在 SearchTargetPlaceProcess 内部写入，
-                    // 此时 targetLPos 尚未设置，同一帧内后续的中继需要用 searchLPos 来判断。
-                    if (relay.searchAstroId == astroId)
-                    {
-                        if (relay.searchLPos.sqrMagnitude > 0.01f &&
-                            (relay.searchLPos - candidate).sqrMagnitude < clearanceSq)
+                        Vector3 relayTarget = relay.targetLPos;
+                        float sqrDist = (relayTarget - candidate).sqrMagnitude;
+                        if (sqrDist < clearanceSq)
                         {
                             return true;
                         }
