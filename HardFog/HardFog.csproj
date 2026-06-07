@@ -307,8 +307,9 @@
     <Compile Include="DarkFogControl.cs" />
     <Compile Include="SurfaceRuinControl.cs" />
     <Compile Include="BuildAnywhereOnWaterControl.cs" />
-    <Compile Include="PumpAnywhere.cs" />
     <Compile Include="SuperThreatReducerControl.cs" />
+    <!-- PumpAnywhere.cs 已弃用，仅保留作为学习参考（幽灵代码） -->
+    <!-- <Compile Include="PumpAnywhere.cs" /> -->
     <!-- FogThreatDampenerControl.cs 已弃用，由 SuperThreatReducerControl 取代 -->
     <!-- <Compile Include="FogThreatDampenerControl.cs" /> -->
     <Compile Include="SmartRelayDispatchControl.cs" />

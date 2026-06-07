@@ -51,7 +51,6 @@ namespace HardFog
             FasterRelayLaunchControl.Init(Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false, "Enable faster relay station launch. Checks every 120 hive ticks and dispatches one idle relay when none is already outbound."), Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
-            PumpAnywhere.Init(Config.Bind("HardFog", "PumpAnywhereEnabled", false, "Enable placing water pumps anywhere on planets with matching water type."), Logger);
             VeinPlacementControl.Init(Config.Bind("HardFog", "VeinPlacementEnabled", true, "Enable better vein placement for future planet vein generation."), Logger);
             OverpoweredMechaFightersControl.Init(Config.Bind("HardFog", "OverpoweredMechaFightersEnabled", false, "Enable stronger mecha fighters: 10x range, 10x damage, and invincibility."), Logger);
 
@@ -85,7 +84,6 @@ namespace HardFog
             FasterRelayLaunchControl.Uninit();
             FasterResearchControl.Uninit();
             BuildAnywhereOnWaterControl.Uninit();
-            PumpAnywhere.Uninit();
             VeinPlacementControl.Uninit();
             OverpoweredMechaFightersControl.Uninit();
         }

@@ -1,3 +1,12 @@
+// ═══════════════════════════════════════════════════════════════
+// DEPRECATED — 已弃用 — 仅保留作为学习参考（幽灵代码）
+//
+// 该功能已从 HardFog UI 和项目编译中移除。
+// 本文件仅保留作为过去水泵放置逻辑的学习参考。
+//
+// Kept for reference only — not compiled or activated.
+// ═══════════════════════════════════════════════════════════════
+
 using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
