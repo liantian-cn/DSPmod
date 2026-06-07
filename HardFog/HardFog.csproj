@@ -296,7 +296,7 @@
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\UnityEngine.XRModule.dll</HintPath>
     </Reference>
     <Reference Include="UXAssist">
-      <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\BepInEx\plugins\UXAssist\UXAssist.dll</HintPath>
+      <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\BepInEx\plugins\soarqin-UXAssist-1.5.7\UXAssist.dll</HintPath>
     </Reference>
     <Reference Include="XGamingRuntime">
       <HintPath>D:\SteamLibrary\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\XGamingRuntime.dll</HintPath>
