@@ -19,8 +19,9 @@ namespace HardFog
         private const string FillGalaxyHivesKey = "fill_hive";
         private const string SuperThreatReducerHiveKey = "super-threat-reducer-hive-enabled";
         private const string SuperThreatReducerGroundKey = "super-threat-reducer-ground-enabled";
-        private const string SmartRelayDispatchKey = "smart-relay-dispatch-enabled";
-        private const string FasterRelayLaunchKey = "faster-relay-launch-enabled";
+        private const string RelayLandingLogicKey = "relay-landing-logic-enabled";
+        private const string RelayLandingMarkersOnlyKey = "relay-landing-markers-only";
+        private const string RelayLandingFastLaunchKey = "relay-landing-fast-launch";
         private const string FasterResearchKey = "faster-research-enabled";
         private const string BuildAnywhereOnWaterKey = "build-anywhere-on-water-enabled";
         private const string VeinPlacementKey = "vein-placement-enabled";
@@ -54,8 +55,9 @@ namespace HardFog
                 Config.Bind("DarkFog", "SuperThreatReducerGroundEnabled", false, "Enable Ground Base Suppression. Skips ground base threat accumulation and assault scans."),
                 Logger);
             RelayControl.Init(
-                Config.Bind("DarkFog", "FasterRelayLaunchEnabled", false, "Enable faster relay station launch. Checks every 120 hive ticks and dispatches one idle relay when none is already outbound."),
-                Config.Bind("DarkFog", "SmartRelayDispatchEnabled", false, "Only applies when faster relay station launch is enabled. Dispatch relay stations only to markers."),
+                Config.Bind("DarkFog", "RelayLandingLogicEnabled", true, "Enable relay landing logic modification. Uses preset landing spots (markers + sphere-packed coordinates) instead of vanilla random sampling."),
+                Config.Bind("DarkFog", "RelayLandingMarkersOnly", false, "When relay landing logic is enabled, restrict landing candidates to markers only (ignore RuinPositions coordinates)."),
+                Config.Bind("DarkFog", "RelayLandingFastLaunch", false, "When relay landing logic is enabled, check relay demand every 120 hive ticks instead of 600."),
                 Logger);
             FasterResearchControl.Init(Config.Bind("HardFog", "FasterResearchEnabled", false, "Enable research speed multiplier. Reduces tech hash needed to about 1/36."), Logger);
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
@@ -68,8 +70,9 @@ namespace HardFog
             I18N.Add(FillGalaxyHivesKey, "Fill the galaxy with Dark Fog hives", "为整个星系填满黑雾巢穴");
             I18N.Add(SuperThreatReducerHiveKey, "Space Hive Suppression", "太空巢穴降压");
             I18N.Add(SuperThreatReducerGroundKey, "Ground Base Suppression", "地面基地降压");
-            I18N.Add(SmartRelayDispatchKey, "Relay stations only dispatch to markers", "中继站只发往信标");
-            I18N.Add(FasterRelayLaunchKey, "Launch relay stations faster", "更快的发射中继站");
+            I18N.Add(RelayLandingLogicKey, "Relay Landing Logic Modification", "中继站降落逻辑修改");
+            I18N.Add(RelayLandingMarkersOnlyKey, "Relay stations only dispatch to markers", "中继站只发往信标");
+            I18N.Add(RelayLandingFastLaunchKey, "Launch relay stations faster", "更快的发射中继站");
             I18N.Add(FasterResearchKey, "Research Speed Multiplier", "研究倍速器");
             I18N.Add(VeinPlacementKey, "Better vein placement", "更好的矿物位置");
             I18N.Add(OverpoweredMechaFightersKey, "Fighters fly farther", "战斗机更远的飞行距离");
@@ -115,13 +118,15 @@ namespace HardFog
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, SuperThreatReducerControl.EnabledConfigGround, SuperThreatReducerGroundKey, 16);
             y += 36f;
-            wnd.AddCheckBox(leftX, y, tab, RelayControl.FasterRelayLaunchEnabledConfig, FasterRelayLaunchKey, 16);
+            wnd.AddCheckBox(leftX, y, tab, RelayControl.LandingLogicEnabledConfig, RelayLandingLogicKey, 16);
             y += 36f;
-            MyCheckBox smartRelayDispatchCheckBox = wnd.AddCheckBox(leftX + 20f, y, tab, RelayControl.SmartRelayDispatchEnabledConfig, SmartRelayDispatchKey, 13);
-            // 智能派遣依赖“更快发射中继站”，所以父选项关闭时只禁用子选项 UI，避免用户误以为它单独生效。
-            RelayControl.FasterRelayLaunchEnabledConfig.SettingChanged += RelayOptionChanged;
+            MyCheckBox markersOnlyCheckBox = wnd.AddCheckBox(leftX + 20f, y, tab, RelayControl.MarkersOnlyConfig, RelayLandingMarkersOnlyKey, 13);
+            y += 36f;
+            MyCheckBox fastLaunchCheckBox = wnd.AddCheckBox(leftX + 20f, y, tab, RelayControl.FastLaunchEnabledConfig, RelayLandingFastLaunchKey, 13);
+            // 两个子选项依赖”中继站降落逻辑修改”，所以父选项关闭时禁用子选项 UI，避免用户误以为独立生效。
+            RelayControl.LandingLogicEnabledConfig.SettingChanged += RelayOptionChanged;
             // 配置窗口销毁时解绑本地事件，避免窗口重建后一个配置变更触发多个旧闭包。
-            wnd.OnFree += () => { RelayControl.FasterRelayLaunchEnabledConfig.SettingChanged -= RelayOptionChanged; };
+            wnd.OnFree += () => { RelayControl.LandingLogicEnabledConfig.SettingChanged -= RelayOptionChanged; };
             RelayOptionChanged(null, null);
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, FasterResearchControl.EnabledConfig, FasterResearchKey, 16);
@@ -151,8 +156,10 @@ namespace HardFog
 
             void RelayOptionChanged(object sender, EventArgs args)
             {
-                // 只控制 UI 可用性，不改 SmartRelayDispatch 的配置值；这样重新启用父选项后能保留用户偏好。
-                smartRelayDispatchCheckBox.SetEnable(RelayControl.FasterRelayLaunchEnabledConfig.Value);
+                // 只控制 UI 可用性，不改子选项的配置值；这样重新启用父选项后能保留用户偏好。
+                bool enabled = RelayControl.LandingLogicEnabledConfig.Value;
+                markersOnlyCheckBox.SetEnable(enabled);
+                fastLaunchCheckBox.SetEnable(enabled);
             }
         }
 
