@@ -36,6 +36,8 @@ namespace HardFog
             CombatStat[] combatStatsBuffer = planetFactory.skillSystem.combatStats.buffer;
             ObjectPool<DFGBaseComponent> bases = planetFactory.enemySystem.bases;
 
+            ReturnRelaysTargetingPlanet(planet);
+
             for (int i = 1; i < bases.cursor; i++)
             {
                 DFGBaseComponent baseComponent = bases.buffer[i];
@@ -89,9 +91,91 @@ namespace HardFog
                     continue;
                 }
 
+                if (enemyData.dfRelayId > 0)
+                {
+                    LogInfo("skip relay -> enemyData.id: " + enemyData.id);
+                    continue;
+                }
+
                 LogInfo("KillEnemyFinal -> enemyData.id: " + enemyData.id);
                 spaceSector.KillEnemyFinal(enemyData.id, ref CombatStat.empty);
             }
+        }
+
+        private static void ReturnRelaysTargetingPlanet(PlanetData planet)
+        {
+            if (planet == null || planet.star == null || GameMain.spaceSector == null)
+            {
+                return;
+            }
+
+            EnemyDFHiveSystem hive = GameMain.spaceSector.dfHives[planet.star.index];
+            while (hive != null)
+            {
+                ReturnRelaysTargetingPlanet(hive, planet.astroId);
+                hive = hive.nextSibling;
+            }
+        }
+
+        private static void ReturnRelaysTargetingPlanet(EnemyDFHiveSystem hive, int planetAstroId)
+        {
+            if (hive == null || hive.relays == null)
+            {
+                return;
+            }
+
+            for (int i = hive.relays.cursor - 1; i > 0; i--)
+            {
+                DFRelayComponent relay = hive.relays.buffer[i];
+                if (relay == null || relay.id != i || relay.targetAstroId != planetAstroId)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    if (ReturnRelay(relay))
+                    {
+                        hive.relayNeutralizedCounter++;
+                    }
+                }
+                catch (Exception)
+                {
+                    LogInfo("error to return relay " + relay.id);
+                }
+            }
+        }
+
+        private static bool ReturnRelay(DFRelayComponent relay)
+        {
+            if (relay.direction < 0)
+            {
+                return false;
+            }
+
+            LogInfo("return relay -> relay.id: " + relay.id + ", enemyId: " + relay.enemyId);
+
+            if (relay.stage == 2)
+            {
+                relay.LeaveBase();
+                return true;
+            }
+
+            relay.ClearBaseReferences();
+            relay.targetAstroId = 0;
+            relay.targetLPos = UnityEngine.Vector3.zero;
+            relay.targetYaw = 0f;
+            relay.baseState = 0;
+            relay.baseId = 0;
+            relay.baseTicks = 0;
+            relay.baseEvolve = default(EvolveData);
+            relay.baseRespawnCD = 0;
+            relay.direction = -1;
+            relay.param0 = 0f;
+            relay.RemoveAllCarriers();
+            relay.ResetSearchStates();
+            relay.ResetTargetedMarker();
+            return true;
         }
 
         private static void ClearGroundBaseFormations(DFGBaseComponent baseComponent)

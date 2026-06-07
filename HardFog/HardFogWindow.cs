@@ -7,7 +7,7 @@ using UXAssist.UI;
 
 namespace HardFog
 {
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.20")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.21")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
@@ -54,8 +54,8 @@ namespace HardFog
             OverpoweredMechaFightersControl.Init(Config.Bind("HardFog", "OverpoweredMechaFightersEnabled", false, "Enable stronger mecha fighters: 10x range, 10x damage, and invincibility."), Logger);
 
             I18N.Add(WindowTitleKey, "Dark Fog Control", "黑雾操控");
-            I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog on current planet", "清理当前星球的黑雾");
-            I18N.Add(ClearCurrentStarKey, "Clear space Dark Fog in current star system", "清理当前恒星的太空黑雾");
+            I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog ground bases on current planet", "清理当前星球的地面黑雾基地");
+            I18N.Add(ClearCurrentStarKey, "Clear space Dark Fog hives in current star system", "清理当前恒星的太空黑雾巢穴");
             I18N.Add(FillGalaxyHivesKey, "Fill the galaxy with Dark Fog hives", "为整个星系填满黑雾巢穴");
             I18N.Add(SuperThreatReducerHiveKey, "Space Hive Suppression", "太空巢穴降压");
             I18N.Add(SuperThreatReducerGroundKey, "Ground Base Suppression", "地面基地降压");
