@@ -47,14 +47,23 @@ namespace HardFog
             }
 
             HashSet<int> baseIdSet = new HashSet<int>(baseIds);
-            ClearGroundUnits(planetFactory, baseIdSet);
+            List<EnemyModelRef> removedModels = new List<EnemyModelRef>();
+            ClearGroundUnits(planetFactory, baseIdSet, removedModels);
             ClearGroundBaseFormations(planetFactory, baseIds);
-            ClearGroundNonCoreBuildings(planetFactory, baseIds);
-            ClearGroundBaseCores(planetFactory, baseIds);
+            ClearGroundNonCoreBuildings(planetFactory, baseIds, removedModels);
+            ClearGroundBaseCores(planetFactory, baseIds, removedModels);
             ReturnRelaysForGroundBases(planet, baseIdSet);
             UnlinkGroundBaseRuins(planetFactory, bases, baseIds);
+            ClearLocalDarkFogRenderResidue(planet, planetFactory, baseIds, removedModels);
             RefreshGroundDefenseSearch(planetFactory);
             ClearDarkFogAssaultTips();
+        }
+
+        private struct EnemyModelRef
+        {
+            public int ModelIndex;
+
+            public int ModelId;
         }
 
         private static List<int> CollectGroundBaseIdsDescending(ObjectPool<DFGBaseComponent> bases)
@@ -77,15 +86,15 @@ namespace HardFog
             return baseIds;
         }
 
-        private static void ClearGroundUnits(PlanetFactory planetFactory, HashSet<int> baseIds)
+        private static void ClearGroundUnits(PlanetFactory planetFactory, HashSet<int> baseIds, List<EnemyModelRef> removedModels)
         {
             foreach (int enemyId in CollectGroundUnitEnemyIdsDescending(planetFactory, baseIds))
             {
-                KillGroundEnemyFinally(planetFactory, enemyId, "unit");
+                KillGroundEnemyFinally(planetFactory, enemyId, "unit", removedModels);
             }
         }
 
-        private static void ClearGroundNonCoreBuildings(PlanetFactory planetFactory, List<int> baseIds)
+        private static void ClearGroundNonCoreBuildings(PlanetFactory planetFactory, List<int> baseIds, List<EnemyModelRef> removedModels)
         {
             const int maxPasses = 8;
             for (int pass = 0; pass < maxPasses; pass++)
@@ -95,7 +104,7 @@ namespace HardFog
                 {
                     foreach (int enemyId in CollectGroundNonCoreBuildingEnemyIdsDescending(planetFactory, baseId))
                     {
-                        if (KillGroundEnemyFinally(planetFactory, enemyId, "building"))
+                        if (KillGroundEnemyFinally(planetFactory, enemyId, "building", removedModels))
                         {
                             killedCount++;
                         }
@@ -110,7 +119,7 @@ namespace HardFog
             }
         }
 
-        private static void ClearGroundBaseCores(PlanetFactory planetFactory, List<int> baseIds)
+        private static void ClearGroundBaseCores(PlanetFactory planetFactory, List<int> baseIds, List<EnemyModelRef> removedModels)
         {
             foreach (int baseId in baseIds)
             {
@@ -118,7 +127,7 @@ namespace HardFog
                 int enemyId = baseComponent?.enemyId ?? 0;
                 if (IsGroundCoreEnemy(planetFactory, enemyId, baseId))
                 {
-                    KillGroundEnemyFinally(planetFactory, enemyId, "core");
+                    KillGroundEnemyFinally(planetFactory, enemyId, "core", removedModels);
                 }
             }
         }
@@ -233,7 +242,7 @@ namespace HardFog
             return !enemyData.dynamic && enemyData.dfGBaseId == baseId;
         }
 
-        private static bool KillGroundEnemyFinally(PlanetFactory planetFactory, int enemyId, string kind)
+        private static bool KillGroundEnemyFinally(PlanetFactory planetFactory, int enemyId, string kind, List<EnemyModelRef> removedModels)
         {
             if (!IsLiveGroundEnemy(planetFactory, enemyId))
             {
@@ -242,6 +251,7 @@ namespace HardFog
 
             try
             {
+                RememberEnemyModel(planetFactory, enemyId, removedModels);
                 LogInfo("KillEnemyFinally " + kind + " -> enemyData.id: " + enemyId);
                 planetFactory.KillEnemyFinally(enemyId, ref CombatStat.empty);
                 return true;
@@ -261,6 +271,26 @@ namespace HardFog
                 && enemyId < planetFactory.enemyPool.Length
                 && planetFactory.enemyPool[enemyId].id == enemyId
                 && !planetFactory.enemyPool[enemyId].isSpace;
+        }
+
+        private static void RememberEnemyModel(PlanetFactory planetFactory, int enemyId, List<EnemyModelRef> removedModels)
+        {
+            if (removedModels == null || !IsLiveGroundEnemy(planetFactory, enemyId))
+            {
+                return;
+            }
+
+            ref EnemyData enemyData = ref planetFactory.enemyPool[enemyId];
+            if (enemyData.modelId <= 0)
+            {
+                return;
+            }
+
+            removedModels.Add(new EnemyModelRef
+            {
+                ModelIndex = enemyData.modelIndex,
+                ModelId = enemyData.modelId
+            });
         }
 
         private static void ClearGroundBaseFormations(PlanetFactory planetFactory, List<int> baseIds)
@@ -463,6 +493,110 @@ namespace HardFog
             }
 
             planetFactory.enemySystem.RemoveDFGBaseComponent(baseId);
+        }
+
+        private static void ClearLocalDarkFogRenderResidue(
+            PlanetData planet,
+            PlanetFactory planetFactory,
+            List<int> baseIds,
+            List<EnemyModelRef> removedModels)
+        {
+            if (planet?.factoryModel == null || planetFactory == null || planet != GameMain.localPlanet || !planet.factoryLoaded)
+            {
+                return;
+            }
+
+            RemoveRememberedEnemyModels(planetFactory, removedModels);
+            ClearLocalGroundRenderer(planet.factoryModel, planetFactory, baseIds);
+            ClearLocalFormationRenderers(planet.factoryModel);
+        }
+
+        private static void RemoveRememberedEnemyModels(PlanetFactory planetFactory, List<EnemyModelRef> removedModels)
+        {
+            if (removedModels == null || removedModels.Count <= 0 || GameMain.gpuiManager?.activeFactory != planetFactory)
+            {
+                return;
+            }
+
+            HashSet<int> removedModelIds = new HashSet<int>();
+            foreach (EnemyModelRef modelRef in removedModels)
+            {
+                if (modelRef.ModelId <= 0 || !removedModelIds.Add(modelRef.ModelId))
+                {
+                    continue;
+                }
+
+                try
+                {
+                    GameMain.gpuiManager.RemoveModel(modelRef.ModelIndex, modelRef.ModelId);
+                }
+                catch (Exception ex)
+                {
+                    LogInfo("error to remove remembered enemy model " + modelRef.ModelId + ": " + ex.Message);
+                }
+            }
+        }
+
+        private static void ClearLocalGroundRenderer(FactoryModel factoryModel, PlanetFactory planetFactory, List<int> baseIds)
+        {
+            EnemyDFGroundRenderer renderer = factoryModel.dfGroundRenderer;
+            if (renderer == null)
+            {
+                return;
+            }
+
+            try
+            {
+                renderer.enemySystem = planetFactory.enemySystem;
+
+                if (renderer.builderArr != null && baseIds != null)
+                {
+                    foreach (int baseId in baseIds)
+                    {
+                        int start = baseId * 80;
+                        int end = Math.Min(start + 80, renderer.builderArr.Length);
+                        for (int i = start; i < end; i++)
+                        {
+                            renderer.builderArr[i].instId = 0;
+                        }
+                    }
+                }
+
+                if (renderer.truckSegments != null)
+                {
+                    Array.Clear(renderer.truckSegments, 0, renderer.truckSegments.Length);
+                }
+
+                if (renderer.truckBuilderIndices != null)
+                {
+                    Array.Clear(renderer.truckBuilderIndices, 0, renderer.truckBuilderIndices.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogInfo("error to clear local ground renderer residue: " + ex.Message);
+            }
+        }
+
+        private static void ClearLocalFormationRenderers(FactoryModel factoryModel)
+        {
+            EnemyFormationRenderer[] renderers = factoryModel.dfFormRenderers;
+            if (renderers == null)
+            {
+                return;
+            }
+
+            foreach (EnemyFormationRenderer renderer in renderers)
+            {
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                renderer.unitCount = 0;
+                renderer.stateCursor = 0;
+                renderer.groupCursor = 0;
+            }
         }
 
         private static void RefreshGroundDefenseSearch(PlanetFactory planetFactory)

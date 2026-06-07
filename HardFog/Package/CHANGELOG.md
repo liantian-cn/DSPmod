@@ -3,7 +3,9 @@
 ## 0.0.24
 
 - 重写当前星球地面黑雾清理：严格按地面单位、非核心建筑、核心、中继站、废墟解绑的顺序使用游戏原生击杀和移除路径，避免残留敌人和损坏组件池。
+- 清理当前星球地面黑雾后，额外清空本地黑雾阵型和地面渲染缓存，并补移除已记录的敌人模型，减少无需读档才消失的不可交互残影。
 - Rewrote current planet ground Dark Fog cleanup to use game-native kill and removal paths in the strict order of units, non-core buildings, cores, relay return, and ruin unlinking, avoiding residual enemies and corrupted component pools.
+- After current planet ground Dark Fog cleanup, additionally clears local Dark Fog formation and ground renderer caches and removes remembered enemy models to reduce non-interactive visuals that previously disappeared only after reload.
 
 ## 0.0.23
 
