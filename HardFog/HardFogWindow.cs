@@ -8,7 +8,7 @@ using UXAssist.UI;
 namespace HardFog
 {
     // HardFog 的 BepInEx 入口类：注册配置、初始化各功能模块，并把控制按钮/开关注入 UXAssist 配置窗口。
-    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.24")]
+    [BepInPlugin("me.liantian.plugin.HardFog", "HardFog", "0.0.25")]
     [BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
     public class HardFogWindow : BaseUnityPlugin
     {
