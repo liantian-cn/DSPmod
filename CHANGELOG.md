@@ -1,5 +1,12 @@
 # 更新日志 / Changelog
 
+## 0.0.25
+
+- 拦截中继站搜索目标时，RuinPositions候选顺序现在每次随机打乱，而非固定序列。
+- 目标星球有护盾（任意覆盖率）时，中继站只降落到信标，忽略RuinPositions候选。
+- When intercepting relay target search, RuinPositions candidate order is now shuffled randomly each time instead of using a fixed sequence.
+- When the target planet has shield coverage (any ratio), relays only land on beacons and ignore RuinPositions candidates.
+
 ## 0.0.24
 
 - fix bug
