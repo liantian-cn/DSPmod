@@ -181,23 +181,26 @@ namespace HardFog
             PlanetFactory factory = planet.factory;
 
             // 构建候选落点列表：先收集信标，再追加 RuinPositions（除非仅信标模式）。
+            // markerEntityIds 与 candidates 平行，记录每个候选点对应的信标实体 ID（非信标候选为 0）。
             List<Vector3> candidates = new List<Vector3>();
-            CollectMarkerCandidates(hive, planet, factory, candidates);
+            List<int> markerEntityIds = new List<int>();
+            CollectMarkerCandidates(hive, planet, factory, candidates, markerEntityIds);
             if (!IsMarkersOnlyEnabled())
             {
-                CollectRuinPositionCandidates(planet, factory, candidates);
+                CollectRuinPositionCandidates(planet, factory, candidates, markerEntityIds);
             }
 
             // 按顺序遍历候选落点，找第一个满足 AT 场 + 52m 净空要求的。
-            foreach (Vector3 candidate in candidates)
+            for (int ci = 0; ci < candidates.Count; ci++)
             {
+                Vector3 candidate = candidates[ci];
                 // AT 场检查（仅此一项保留原版逻辑，其余忽略）。
                 if (factory != null && factory.planetATField != null && !factory.planetATField.TestRelayCondition(candidate))
                 {
                     continue;
                 }
 
-                if (IsCandidateClear(hive, factory, planet.astroId, candidate))
+                if (IsCandidateClear(hive, factory, planet.astroId, candidate, markerEntityIds[ci]))
                 {
                     // 候选坐标是星球表面位置；searchLPos 需要抬高到轨道高度。
                     __instance.searchAstroId = planet.astroId;
@@ -217,12 +220,13 @@ namespace HardFog
             return false;
         }
 
-        // 收集目标星球上所有可用的吸引信标坐标。
+        // 收集目标星球上所有可用的吸引信标坐标，同时记录每个候选对应的信标实体 ID。
         private static void CollectMarkerCandidates(
             EnemyDFHiveSystem hive,
             PlanetData planet,
             PlanetFactory factory,
-            List<Vector3> candidates)
+            List<Vector3> candidates,
+            List<int> markerEntityIds)
         {
             if (factory == null || factory.digitalSystem == null)
             {
@@ -251,12 +255,13 @@ namespace HardFog
 
                 Vector3 entityPos = factory.entityPool[marker.entityId].pos;
                 candidates.Add(entityPos);
+                markerEntityIds.Add(marker.entityId);
             }
         }
 
         // 收集 RuinPositions 全部候选方向，随机排序后投影到目标星球表面。
         // 如果目标星球有护盾（任意覆盖率），则跳过 RuinPositions，只使用信标。
-        private static void CollectRuinPositionCandidates(PlanetData planet, PlanetFactory factory, List<Vector3> candidates)
+        private static void CollectRuinPositionCandidates(PlanetData planet, PlanetFactory factory, List<Vector3> candidates, List<int> markerEntityIds)
         {
             if (HasAnyShieldCoverage(factory))
             {
@@ -282,6 +287,7 @@ namespace HardFog
             {
                 Vector3 dir = all[indices[i]].normalized;
                 candidates.Add(dir * surfaceRadius);
+                markerEntityIds.Add(0);
             }
         }
 
@@ -290,12 +296,15 @@ namespace HardFog
             return factory != null && factory.planetATField != null && !factory.planetATField.isEmpty;
         }
 
-        // 检查候选落点周围 52m 是否有已有地面基地或废墟（model 406），以及是否有其他中继已锁定此位置。
+        // 检查候选落点周围 52m 是否有任何建筑（实体/预建）、地面基地、废墟（model 406），
+        // 以及是否有其他中继已锁定此位置。
+        // excludeEntityId：信标候选点对应的信标实体 ID，需排除自身（否则信标候选永远不通过）。
         private static bool IsCandidateClear(
             EnemyDFHiveSystem hive,
             PlanetFactory factory,
             int astroId,
-            Vector3 candidate)
+            Vector3 candidate,
+            int excludeEntityId)
         {
             float clearanceSq = MinClearanceMeters * MinClearanceMeters;
 
@@ -308,6 +317,34 @@ namespace HardFog
             if (factory == null)
             {
                 return true;
+            }
+
+            // 检查 52m 内是否有任何玩家建筑（实体）。
+            EntityData[] entityPool = factory.entityPool;
+            int entityCursor = factory.entityCursor;
+            for (int i = 1; i < entityCursor; i++)
+            {
+                if (entityPool[i].id == i && i != excludeEntityId)
+                {
+                    if ((entityPool[i].pos - candidate).sqrMagnitude < clearanceSq)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            // 检查 52m 内是否有任何预建。
+            PrebuildData[] prebuildPool = factory.prebuildPool;
+            int prebuildCursor = factory.prebuildCursor;
+            for (int i = 1; i < prebuildCursor; i++)
+            {
+                if (prebuildPool[i].id == i && !prebuildPool[i].isDestroyed)
+                {
+                    if ((prebuildPool[i].pos - candidate).sqrMagnitude < clearanceSq)
+                    {
+                        return false;
+                    }
+                }
             }
 
             // 检查已有地面基地。
