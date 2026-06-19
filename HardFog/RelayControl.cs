@@ -30,6 +30,8 @@ namespace HardFog
 
         private static ManualLogSource Log;
         private static Harmony harmony;
+        // Fisher-Yates 洗牌用的随机种子，每帧独立于巢穴的 rtseed。
+        private static int _shuffleSeed = (int)(System.Diagnostics.Stopwatch.GetTimestamp() & 0x7FFFFFFF);
         private static EventHandler masterSwitchChangedHandler;
 
         // 缓存 EraseLandingObstacles 的 MethodInfo，避免每次降落都反射查找。
@@ -183,7 +185,7 @@ namespace HardFog
             CollectMarkerCandidates(hive, planet, factory, candidates);
             if (!IsMarkersOnlyEnabled())
             {
-                CollectRuinPositionCandidates(planet, candidates);
+                CollectRuinPositionCandidates(planet, factory, candidates);
             }
 
             // 按顺序遍历候选落点，找第一个满足 AT 场 + 52m 净空要求的。
@@ -252,15 +254,40 @@ namespace HardFog
             }
         }
 
-        // 收集 RuinPositions 全部 182 个候选方向，投影到目标星球表面。
-        private static void CollectRuinPositionCandidates(PlanetData planet, List<Vector3> candidates)
+        // 收集 RuinPositions 全部候选方向，随机排序后投影到目标星球表面。
+        // 如果目标星球有护盾（任意覆盖率），则跳过 RuinPositions，只使用信标。
+        private static void CollectRuinPositionCandidates(PlanetData planet, PlanetFactory factory, List<Vector3> candidates)
         {
-            float surfaceRadius = planet.realRadius + 0.2f;
-            for (int i = 0; i < RuinPositions.All.Length; i++)
+            if (HasAnyShieldCoverage(factory))
             {
-                Vector3 dir = RuinPositions.All[i].normalized;
+                return;
+            }
+
+            float surfaceRadius = planet.realRadius + 0.2f;
+            Vector3[] all = RuinPositions.All;
+            // Fisher-Yates 洗牌，创建随机排列的索引数组。
+            int[] indices = new int[all.Length];
+            for (int i = 0; i < indices.Length; i++)
+            {
+                indices[i] = i;
+            }
+
+            for (int i = indices.Length - 1; i > 0; i--)
+            {
+                int j = RandomTable.Integer(ref _shuffleSeed, i + 1);
+                (indices[i], indices[j]) = (indices[j], indices[i]);
+            }
+
+            for (int i = 0; i < indices.Length; i++)
+            {
+                Vector3 dir = all[indices[i]].normalized;
                 candidates.Add(dir * surfaceRadius);
             }
+        }
+
+        private static bool HasAnyShieldCoverage(PlanetFactory factory)
+        {
+            return factory != null && factory.planetATField != null && !factory.planetATField.isEmpty;
         }
 
         // 检查候选落点周围 52m 是否有已有地面基地或废墟（model 406），以及是否有其他中继已锁定此位置。
