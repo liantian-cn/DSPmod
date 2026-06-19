@@ -1,5 +1,10 @@
 # 更新日志 / Changelog
 
+## 0.0.26
+
+- 中继站降落选址现在检查52m内是否有任何玩家建筑（实体/预建），有则拒绝降落。
+- Relay landing site selection now checks for any player buildings (entities/prebuilds) within 52m and rejects if found.
+
 ## 0.0.25
 
 - 拦截中继站搜索目标时，RuinPositions候选顺序现在每次随机打乱，而非固定序列。
