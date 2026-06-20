@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BepInEx.Logging;
+using UnityEngine;
 
 namespace HardFog
 {
@@ -65,6 +66,7 @@ namespace HardFog
             ClearGroundBaseCores(planetFactory, baseIds, removedModels);
             ReturnRelaysForGroundBases(planet, baseIdSet);
             UnlinkGroundBaseRuins(planetFactory, bases, baseIds);
+            BuildGeothermalOnRuins(planetFactory, bases, baseIds);
             ClearLocalDarkFogRenderResidue(planet, planetFactory, baseIds, removedModels);
             RefreshGroundDefenseSearch(planetFactory);
             ClearDarkFogAssaultTips();
@@ -559,6 +561,243 @@ namespace HardFog
                     LogInfo("error to unlink DFGBaseComponent " + baseId + ": " + ex.Message);
                 }
             }
+        }
+
+        // 在所有废墟上安装地热发电站；基地解绑后废墟仍然存在，此时安装地热站可以利用废墟位置。
+        private static void BuildGeothermalOnRuins(PlanetFactory planetFactory, ObjectPool<DFGBaseComponent> bases, List<int> baseIds)
+        {
+            // 没有工厂或基地列表时没有可安装的废墟。
+            if (planetFactory == null || bases == null || baseIds == null || baseIds.Count <= 0)
+            {
+                return;
+            }
+
+            ItemProto geothermalItem = FindGeothermalPowerItem();
+            // 找不到地热发电站物品原型时不能安装。
+            if (geothermalItem == null || geothermalItem.prefabDesc == null || !geothermalItem.prefabDesc.geothermal)
+            {
+                LogInfo("BuildGeothermalOnRuins: geothermal power item not found.");
+                return;
+            }
+
+            int built = 0;
+            int skippedOccupied = 0;
+            int skippedNoRuin = 0;
+            int skippedFailed = 0;
+
+            foreach (int baseId in baseIds)
+            {
+                // 跳过越界或无效基地 id。
+                if (baseId <= 0 || bases?.buffer == null || baseId >= bases.cursor)
+                {
+                    continue;
+                }
+
+                DFGBaseComponent baseComponent = bases.buffer[baseId];
+                // id 不匹配说明槽位已被释放或复用。
+                if (baseComponent == null || baseComponent.id != baseId)
+                {
+                    continue;
+                }
+
+                int ruinId = baseComponent.ruinId;
+                // 没有废墟 id 时跳过。
+                if (ruinId <= 0)
+                {
+                    skippedNoRuin++;
+                    continue;
+                }
+
+                // 检查废墟是否已有地热站或地热预建。
+                if (HasGeothermalOnBaseRuin(planetFactory, ruinId))
+                {
+                    skippedOccupied++;
+                    continue;
+                }
+
+                // 获取废墟位置用于安装地热站。
+                Vector3 ruinPos = planetFactory.ruinPool[ruinId].pos;
+                int entityId = BuildGeothermalEntity(planetFactory, geothermalItem, ruinId, ruinPos);
+                if (entityId > 0)
+                {
+                    built++;
+                    LogInfo("BuildGeothermalOnRuins -> baseId: " + baseId + ", ruinId: " + ruinId + ", entityId: " + entityId);
+                }
+                else
+                {
+                    skippedFailed++;
+                    LogInfo("BuildGeothermalOnRuins failed -> baseId: " + baseId + ", ruinId: " + ruinId);
+                }
+            }
+
+            LogInfo($"BuildGeothermalOnRuins: built {built}, occupied {skippedOccupied}, no-ruin {skippedNoRuin}, failed {skippedFailed}");
+        }
+
+        // 在物品表中查找可建造的地热发电机原型。
+        private static ItemProto FindGeothermalPowerItem()
+        {
+            // LDB 未初始化时不能查物品表，通常发生在主菜单或加载早期。
+            if (LDB.items?.dataArray == null)
+            {
+                return null;
+            }
+
+            ItemProto[] items = LDB.items.dataArray;
+            // 遍历而不是硬编码 ID，是为了兼容不同版本或物品表顺序变化。
+            for (int i = 0; i < items.Length; i++)
+            {
+                ItemProto item = items[i];
+                // 只考虑真正可建造且会生成实体的物品。
+                if (item?.prefabDesc == null || !item.CanBuild || !item.IsEntity)
+                {
+                    continue;
+                }
+
+                // 地热站同时是发电机并带 geothermal 标记。
+                if (item.prefabDesc.isPowerGen && item.prefabDesc.geothermal)
+                {
+                    return item;
+                }
+            }
+
+            return null;
+        }
+
+        // 检查指定废墟是否已经被地热站或地热预建占用。
+        private static bool HasGeothermalOnBaseRuin(PlanetFactory factory, int baseRuinId)
+        {
+            // 没有电力系统或无效废墟 id 时不可能存在可确认的地热占用。
+            if (factory == null || factory.powerSystem == null || baseRuinId <= 0)
+            {
+                return false;
+            }
+
+            PowerGeneratorComponent[] genPool = factory.powerSystem.genPool;
+            int genCursor = factory.powerSystem.genCursor;
+            // 已完成建筑的地热组件会记录 baseRuinId，可直接检查电力发电机池。
+            for (int i = 1; i < genCursor; i++)
+            {
+                ref PowerGeneratorComponent gen = ref genPool[i];
+                if (gen.id == i && gen.geothermal && gen.baseRuinId == baseRuinId)
+                {
+                    return true;
+                }
+            }
+
+            PrebuildData[] prebuildPool = factory.prebuildPool;
+            int prebuildCursor = factory.prebuildCursor;
+            // 还未建成的地热预建也要算占用，否则可能重复放置预建。
+            for (int i = 1; i < prebuildCursor; i++)
+            {
+                ref PrebuildData prebuild = ref prebuildPool[i];
+                // parameters[0] 记录地热站绑定的 baseRuinId，先过滤无参数或不匹配的预建。
+                if (prebuild.id != i || prebuild.paramCount <= 0 || prebuild.parameters == null || prebuild.parameters[0] != baseRuinId)
+                {
+                    continue;
+                }
+
+                ItemProto item = LDB.items.Select(prebuild.protoId);
+                // 只有地热原型的预建才算占用这个废墟。
+                if (item?.prefabDesc != null && item.prefabDesc.geothermal)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // 用预建转实体流程在指定基地坑废墟上生成地热站，尽量复用游戏原有建造回调。
+        private static int BuildGeothermalEntity(PlanetFactory factory, ItemProto geothermalItem, int baseRuinId, Vector3 ruinPos)
+        {
+            // 基础数据缺失时不能构造预建，否则后续工厂 API 会读空引用。
+            if (factory?.planet == null || geothermalItem?.prefabDesc == null || baseRuinId <= 0)
+            {
+                return 0;
+            }
+
+            // 地热站位置需要吸附到废墟所在星球地表，旋转使用球面朝向。
+            Vector3 buildPos = SnapGeothermalBuildPosition(factory.planet, ruinPos);
+            Quaternion buildRot = Maths.SphericalRotation(buildPos, 0f);
+
+            // 先创建 PrebuildData，是因为工厂 AddEntityDataWithComponents 需要预建 id 来建立完整组件。
+            PrebuildData prebuild = default(PrebuildData);
+            prebuild.isDestroyed = false;
+            prebuild.protoId = (short)geothermalItem.ID;
+            prebuild.modelIndex = (short)geothermalItem.ModelIndex;
+            prebuild.pos = buildPos;
+            prebuild.pos2 = buildPos;
+            prebuild.rot = buildRot;
+            prebuild.rot2 = buildRot;
+            prebuild.InitParametersArray(1);
+            // 地热站通过第一个参数绑定基地坑废墟 id，和游戏原版地热站数据结构保持一致。
+            prebuild.parameters[0] = baseRuinId;
+
+            int prebuildId = factory.AddPrebuildDataWithComponents(prebuild);
+            // 预建失败说明工厂无法接受这次建造，直接返回失败。
+            if (prebuildId <= 0)
+            {
+                return 0;
+            }
+
+            // 再由预建数据生成实体数据；实体的 localized 影响本地渲染/模型创建。
+            EntityData entity = default(EntityData);
+            entity.protoId = prebuild.protoId;
+            entity.modelIndex = prebuild.modelIndex;
+            entity.pos = prebuild.pos;
+            entity.rot = prebuild.rot;
+            entity.alt = entity.pos.magnitude;
+            entity.tilt = prebuild.tilt;
+            entity.localized = factory.planet == GameMain.localPlanet && factory.planet.factoryLoaded;
+
+            int entityId = factory.AddEntityDataWithComponents(entity, prebuildId);
+            // 实体生成失败时要移除预建，避免工厂里留下不可完成的幽灵预建。
+            if (entityId <= 0)
+            {
+                factory.RemovePrebuildWithComponents(prebuildId);
+                return 0;
+            }
+
+            // 通知玩家建造控制器和历史系统，让统计、成就/场景和 UI 刷新走原版路径。
+            GameMain.mainPlayer?.controller?.actionBuild?.NotifyBuilt(-prebuildId, entityId);
+            // 实体已生成后删除预建，完成"预建转实体"。
+            factory.RemovePrebuildWithComponents(prebuildId);
+            GameMain.history?.MarkItemBuilt(prebuild.protoId);
+            // 按实体组件类型触发工厂回调，保持传送带、分拣器、插件和普通建筑状态一致。
+            if (factory.entityPool[entityId].beltId > 0)
+            {
+                factory.OnBeltBuilt(entityId);
+            }
+            if (factory.entityPool[entityId].inserterId > 0)
+            {
+                factory.OnInserterBuilt(entityId);
+            }
+            if (geothermalItem.prefabDesc.addonType != EAddonType.None)
+            {
+                factory.OnAddonBuilt(entityId);
+            }
+            // 通用建造回调和单体建造回调会更新电力、网格、统计等系统。
+            factory.OnBuildEntity(entityId, prebuildId);
+            if (!PlanetFactory.batchBuild)
+            {
+                factory.OnSinglyBuildEntity(entityId, prebuildId);
+            }
+            // 场景系统也需要知道建筑已生成，避免任务或场景条件漏判。
+            GameMain.gameScenario?.NotifyOnBuild(factory.planet.id, factory.entityPool[entityId].protoId, entityId);
+            return entityId;
+        }
+
+        // 计算地热站实际放置位置；优先使用星球辅助吸附，以匹配地形高度和网格。
+        private static Vector3 SnapGeothermalBuildPosition(PlanetData planet, Vector3 ruinPos)
+        {
+            // planet.aux.Snap 会把位置投到当前星球地表，比简单半径投影更贴合地形。
+            if (planet.aux != null)
+            {
+                return planet.aux.Snap(ruinPos, onTerrain: true);
+            }
+
+            // 没有 aux 时退回到球面半径投影，并加一点偏移避免嵌入地表。
+            return ruinPos.normalized * (planet.realRadius + 0.2f);
         }
 
         // 只移除 DFGBaseComponent 和平台状态区域；用于核心敌人已经不存在的情况。
