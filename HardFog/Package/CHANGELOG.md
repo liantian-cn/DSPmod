@@ -3,7 +3,9 @@
 ## 0.0.26
 
 - 中继站降落选址现在检查52m内是否有任何玩家建筑（实体/预建），有则拒绝降落。
+- 清理当前星球地面黑雾后，自动为所有基地废墟安装地热发电站（不扣除背包物品）。
 - Relay landing site selection now checks for any player buildings (entities/prebuilds) within 52m and rejects if found.
+- After clearing ground Dark Fog on current planet, automatically install geothermal power stations on all base ruins (without deducting inventory items).
 
 ## 0.0.25
 
