@@ -70,3 +70,6 @@ SurfaceRuins/output.csv
 /CheatEnabler
 *.pyc
 /.vscode
+findings.md
+progress.md
+task_plan.md
