@@ -64,7 +64,7 @@ namespace HardFog
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
             VeinPlacementControl.Init(Config.Bind("HardFog", "VeinPlacementEnabled", true, "Enable better vein placement for future planet vein generation."), Logger);
             OverpoweredMechaFightersControl.Init(Config.Bind("HardFog", "OverpoweredMechaFightersEnabled", false, "Enable stronger mecha fighters: 10x range, 10x damage, and invincibility."), Logger);
-            GeothermalPowerLineControl.Init(Config.Bind("HardFog", "GeothermalPowerLineEnabled", true, "Extend geothermal power station connection distance and cover radius to planet diameter."), Logger);
+            GeothermalPowerLineControl.Init(Config.Bind("HardFog", "GeothermalPowerLineEnabled", true, "Extend geothermal power station connection distance to planet diameter."), Logger);
 
             I18N.Add(WindowTitleKey, "Dark Fog Control", "黑雾操控");
             I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog ground bases on current planet", "清理当前星球的地面黑雾基地");
