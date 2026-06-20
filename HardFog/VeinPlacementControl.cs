@@ -17,7 +17,7 @@ namespace HardFog
         private const int ModSeedSalt = 0x56_50_30_31;
         // 目标窗口限制矿组主要分布在出生点经度附近和中低纬度，减少玩家前期找矿成本。
         private const float TargetLatitudeDegrees = 40f;
-        private const float TargetLongitudeDegrees = 80f;
+        private const float TargetLongitudeDegrees = 60f;
         // 普通矿和油井使用不同组间距，因为油井原本数量和占地形态不同。
         private const float NormalGroupSpacing = 196f;
         private const float OilGroupSpacing = 100f;
