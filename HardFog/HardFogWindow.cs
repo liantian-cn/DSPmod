@@ -30,6 +30,7 @@ namespace HardFog
         private const string ConstructMidLatitudeRuinsKey = "surface-ruins-construct-mid-latitude";
         private const string ConstructHighLatitudeRuinsKey = "surface-ruins-construct-high-latitude";
         private const string BuildGeothermalOnIdleRuinsKey = "surface-ruins-build-geothermal-on-idle-ruins";
+        private const string GeothermalPowerLineKey = "geothermal-power-line-enabled";
 
         private static UIButton clearCurrentPlanetButton;
         private static UIButton clearCurrentStarButton;
@@ -63,6 +64,7 @@ namespace HardFog
             BuildAnywhereOnWaterControl.Init(Config.Bind("HardFog", "BuildAnywhereOnWaterEnabled", true, "Enable ignoring missing ground support build failures, including water placement."), Logger);
             VeinPlacementControl.Init(Config.Bind("HardFog", "VeinPlacementEnabled", true, "Enable better vein placement for future planet vein generation."), Logger);
             OverpoweredMechaFightersControl.Init(Config.Bind("HardFog", "OverpoweredMechaFightersEnabled", false, "Enable stronger mecha fighters: 10x range, 10x damage, and invincibility."), Logger);
+            GeothermalPowerLineControl.Init(Config.Bind("HardFog", "GeothermalPowerLineEnabled", true, "Extend geothermal power station connection distance and cover radius to planet diameter."), Logger);
 
             I18N.Add(WindowTitleKey, "Dark Fog Control", "黑雾操控");
             I18N.Add(ClearCurrentPlanetKey, "Clear Dark Fog ground bases on current planet", "清理当前星球的地面黑雾基地");
@@ -81,6 +83,7 @@ namespace HardFog
             I18N.Add(ConstructHighLatitudeRuinsKey, "Construct high-latitude ruins", "构造高纬度废墟");
             I18N.Add(BuildGeothermalOnIdleRuinsKey, "Build geothermal power stations on idle ruins", "在空闲废墟上建造地热发电站");
             I18N.Add(BuildAnywhereOnWaterKey, "Ignore ground support requirement", "无需地基支撑建造");
+            I18N.Add(GeothermalPowerLineKey, "Geothermal power line extension", "地热发电站电力线扩展");
             I18N.Apply();
 
             // UXAssist 的配置窗口可能晚于插件 Awake 创建，所以用事件延迟注入 HardFog 的页签。
@@ -98,6 +101,7 @@ namespace HardFog
             BuildAnywhereOnWaterControl.Uninit();
             VeinPlacementControl.Uninit();
             OverpoweredMechaFightersControl.Uninit();
+            GeothermalPowerLineControl.Uninit();
         }
 
         // 创建 HardFog 的配置页；左侧放常驻开关，右侧放立即执行的存档/星球操作按钮。
@@ -136,6 +140,8 @@ namespace HardFog
             wnd.AddCheckBox(leftX, y, tab, VeinPlacementControl.EnabledConfig, VeinPlacementKey, 16);
             y += 36f;
             wnd.AddCheckBox(leftX, y, tab, OverpoweredMechaFightersControl.EnabledConfig, OverpoweredMechaFightersKey, 16);
+            y += 36f;
+            wnd.AddCheckBox(leftX, y, tab, GeothermalPowerLineControl.EnabledConfig, GeothermalPowerLineKey, 16);
 
             // 右侧按钮会立即修改当前存档/星系状态，所以每个按钮都通过 RunWithButtonDisabled 防止重复点击。
             y = 10f;
