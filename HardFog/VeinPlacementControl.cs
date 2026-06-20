@@ -38,6 +38,11 @@ namespace HardFog
         private static Harmony harmony;
         private static EventHandler settingChangedHandler;
 
+        // 记录需要铺设地基的位置，键为星球 ID，值为需要铺设地基的位置列表。
+        // 矿脉生成发生在后台线程，工厂创建在主线程，需要跨线程传递数据。
+        private static readonly Dictionary<int, List<Vector3>> PendingFoundationPositions = new Dictionary<int, List<Vector3>>();
+        private static readonly object PendingFoundationLock = new object();
+
         // PlanetAlgorithm.planet 是非公开字段，用 FieldRef 读取，避免每次反射 GetValue 的开销。
         private static readonly AccessTools.FieldRef<PlanetAlgorithm, PlanetData> PlanetRef =
             AccessTools.FieldRefAccess<PlanetAlgorithm, PlanetData>("planet");
@@ -643,38 +648,42 @@ namespace HardFog
             PlaceTransparentFoundationForGroup(planet, group, center, veinPool);
         }
 
-        // 为矿组中心和每个矿点铺设透明地基。
+        // 为矿组中心和每个矿点记录需要铺设透明地基的位置。
+        // 矿脉生成发生在后台线程，工厂创建在主线程，需要记录位置后在工厂创建后铺设。
         private static void PlaceTransparentFoundationForGroup(PlanetData planet, VeinGroupWork group, Vector3 center, VeinData[] veinPool)
         {
-            // 确保星球有工厂和地基系统。
-            if (planet.factory == null || planet.factory.platformSystem == null)
+            // 记录需要铺设地基的位置。
+            List<Vector3> positions = new List<Vector3>();
+
+            // 记录矿组中心位置。
+            if (center.sqrMagnitude > 1E-08f)
             {
-                return;
+                positions.Add(center);
             }
 
-            PlatformSystem platformSystem = planet.factory.platformSystem;
-
-            // 确保地基数据已初始化。
-            platformSystem.EnsureReformData();
-
-            // 透明地基类型为 7（kUndecalReformType）。
-            const int transparentFoundationType = 7;
-            // 默认地基颜色为 0。
-            const int defaultFoundationColor = 0;
-            // 地基状态为 1 表示已铺设。
-            const byte foundationState = 1;
-
-            // 在矿组中心铺设透明地基。
-            PlaceTransparentFoundationAtPosition(platformSystem, center, transparentFoundationType, defaultFoundationColor, foundationState);
-
-            // 在每个矿点下面铺设透明地基。
+            // 记录每个矿点位置。
             for (int i = 0; i < group.VeinIds.Count; i++)
             {
                 int veinId = group.VeinIds[i];
                 VeinData vein = veinPool[veinId];
                 if (vein.pos.sqrMagnitude > 1E-08f)
                 {
-                    PlaceTransparentFoundationAtPosition(platformSystem, vein.pos, transparentFoundationType, defaultFoundationColor, foundationState);
+                    positions.Add(vein.pos);
+                }
+            }
+
+            // 将位置添加到待处理字典中（线程安全）。
+            if (positions.Count > 0)
+            {
+                lock (PendingFoundationLock)
+                {
+                    List<Vector3> existingPositions;
+                    if (!PendingFoundationPositions.TryGetValue(planet.id, out existingPositions))
+                    {
+                        existingPositions = new List<Vector3>();
+                        PendingFoundationPositions[planet.id] = existingPositions;
+                    }
+                    existingPositions.AddRange(positions);
                 }
             }
         }
@@ -858,6 +867,71 @@ namespace HardFog
         private static void PlanetAlgorithm13GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
             ApplyPlacement(__instance);
+        }
+
+        // PlanetFactory.Init 的后处理；在工厂创建后铺设待处理的透明地基。
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(PlanetFactory), "Init")]
+        private static void PlanetFactoryInitPostfix(PlanetFactory __instance)
+        {
+            if (__instance == null || __instance.planet == null)
+            {
+                return;
+            }
+
+            int planetId = __instance.planet.id;
+            List<Vector3> positions = null;
+
+            // 从待处理字典中获取该星球的地基位置（线程安全）。
+            lock (PendingFoundationLock)
+            {
+                if (PendingFoundationPositions.TryGetValue(planetId, out positions))
+                {
+                    PendingFoundationPositions.Remove(planetId);
+                }
+            }
+
+            // 如果没有待处理的位置，直接返回。
+            if (positions == null || positions.Count == 0)
+            {
+                return;
+            }
+
+            // 铺设透明地基。
+            PlaceTransparentFoundationAtPositions(__instance, positions);
+        }
+
+        // 在指定位置列表铺设透明地基。
+        private static void PlaceTransparentFoundationAtPositions(PlanetFactory factory, List<Vector3> positions)
+        {
+            if (factory.platformSystem == null)
+            {
+                return;
+            }
+
+            PlatformSystem platformSystem = factory.platformSystem;
+
+            // 确保地基数据已初始化。
+            platformSystem.EnsureReformData();
+
+            // 透明地基类型为 7（kUndecalReformType）。
+            const int transparentFoundationType = 7;
+            // 默认地基颜色为 0。
+            const int defaultFoundationColor = 0;
+            // 地基状态为 1 表示已铺设。
+            const byte foundationState = 1;
+
+            // 为每个位置铺设透明地基。
+            for (int i = 0; i < positions.Count; i++)
+            {
+                Vector3 position = positions[i];
+                if (position.sqrMagnitude > 1E-08f)
+                {
+                    PlaceTransparentFoundationAtPosition(platformSystem, position, transparentFoundationType, defaultFoundationColor, foundationState);
+                }
+            }
+
+            Log?.LogInfo($"Placed {positions.Count} transparent foundations on planet {factory.planet.displayName ?? factory.planet.name}");
         }
     }
 }
