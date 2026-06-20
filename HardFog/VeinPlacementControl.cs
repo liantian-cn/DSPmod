@@ -601,7 +601,7 @@ namespace HardFog
             return degrees * Mathf.PI / 180f;
         }
 
-        // 用新的中心方向和局部偏移重写一个矿组中所有矿点的位置。
+        // 用新的中心方向和局部偏移重写一个矿组中所有矿点的位置，并铺设透明地基。
         private static void RegenerateGroupVeins(PlanetData planet, PlanetRawData data, VeinGroupWork group, Vector3 center, DotNet35Random rng)
         {
             List<Vector2> offsets = GenerateLocalOffsets(group, rng);
@@ -634,6 +634,61 @@ namespace HardFog
                 // VeinData 是值类型，修改后必须写回 veinPool。
                 veinPool[veinId] = vein;
             }
+
+            // 在矿组中心和每个矿点下面铺设透明地基。
+            PlaceTransparentFoundationForGroup(planet, group, center, veinPool);
+        }
+
+        // 为矿组中心和每个矿点铺设透明地基。
+        private static void PlaceTransparentFoundationForGroup(PlanetData planet, VeinGroupWork group, Vector3 center, VeinData[] veinPool)
+        {
+            // 确保星球有工厂和地基系统。
+            if (planet.factory == null || planet.factory.platformSystem == null)
+            {
+                return;
+            }
+
+            PlatformSystem platformSystem = planet.factory.platformSystem;
+
+            // 确保地基数据已初始化。
+            platformSystem.EnsureReformData();
+
+            // 透明地基类型为 7（kUndecalReformType）。
+            const int transparentFoundationType = 7;
+            // 默认地基颜色为 0。
+            const int defaultFoundationColor = 0;
+            // 地基状态为 1 表示已铺设。
+            const byte foundationState = 1;
+
+            // 在矿组中心铺设透明地基。
+            PlaceTransparentFoundationAtPosition(platformSystem, center, transparentFoundationType, defaultFoundationColor, foundationState);
+
+            // 在每个矿点下面铺设透明地基。
+            for (int i = 0; i < group.VeinIds.Count; i++)
+            {
+                int veinId = group.VeinIds[i];
+                VeinData vein = veinPool[veinId];
+                if (vein.pos.sqrMagnitude > 1E-08f)
+                {
+                    PlaceTransparentFoundationAtPosition(platformSystem, vein.pos, transparentFoundationType, defaultFoundationColor, foundationState);
+                }
+            }
+        }
+
+        // 在指定位置铺设透明地基。
+        private static void PlaceTransparentFoundationAtPosition(PlatformSystem platformSystem, Vector3 position, int type, int color, byte state)
+        {
+            // 将世界坐标转换为地基索引。
+            int reformIndex = platformSystem.GetReformIndexForPosition(position);
+            if (reformIndex < 0)
+            {
+                return;
+            }
+
+            // 设置地基类型、颜色和状态。
+            platformSystem.SetReformType(reformIndex, type);
+            platformSystem.SetReformColor(reformIndex, color);
+            platformSystem.SetReformState(reformIndex, state);
         }
 
         // 生成同一矿组内部的二维偏移列表；既要成团，也要避免矿点互相重叠。
