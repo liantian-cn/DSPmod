@@ -65,8 +65,8 @@ namespace HardFog
             ClearGroundNonCoreBuildings(planetFactory, baseIds, removedModels);
             ClearGroundBaseCores(planetFactory, baseIds, removedModels);
             ReturnRelaysForGroundBases(planet, baseIdSet);
-            UnlinkGroundBaseRuins(planetFactory, bases, baseIds);
             BuildGeothermalOnRuins(planetFactory, bases, baseIds);
+            UnlinkGroundBaseRuins(planetFactory, bases, baseIds);
             ClearLocalDarkFogRenderResidue(planet, planetFactory, baseIds, removedModels);
             RefreshGroundDefenseSearch(planetFactory);
             ClearDarkFogAssaultTips();
