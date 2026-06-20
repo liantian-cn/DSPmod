@@ -5,8 +5,8 @@ using HarmonyLib;
 
 namespace HardFog
 {
-    // 地热发电站电力线距离扩展控制器：将地热站的连接距离和覆盖半径设为星球直径，
-    // 使地热站能与星球上所有电力节点连接，并覆盖全部消费者。
+    // 地热发电站电力线距离扩展控制器：将地热站的连接距离设为星球直径，
+    // 使地热站能与星球上所有电力节点连接成电网。
     [HarmonyPatch]
     internal static class GeothermalPowerLineControl
     {
@@ -121,12 +121,11 @@ namespace HardFog
                 return;
             }
 
-            // 星球直径 = 2 * realRadius，作为新的连接距离和覆盖半径。
+            // 星球直径 = 2 * realRadius，作为新的连接距离；覆盖半径保持原版不变。
             float planetDiameter = __instance.factory.planet.realRadius * 2f;
             __instance.nodePool[nodeId].connectDistance = planetDiameter;
-            __instance.nodePool[nodeId].coverRadius = planetDiameter;
 
-            Log?.LogInfo($"Geothermal node {nodeId} on planet {__instance.factory.planet.displayName}: connectDistance and coverRadius set to {planetDiameter:F1}");
+            Log?.LogInfo($"Geothermal node {nodeId} on planet {__instance.factory.planet.displayName}: connectDistance set to {planetDiameter:F1}");
         }
     }
 }
