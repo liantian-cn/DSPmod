@@ -4,8 +4,10 @@
 
 - 中继站降落选址现在检查52m内是否有任何玩家建筑（实体/预建），有则拒绝降落。
 - 清理当前星球地面黑雾后，自动为所有基地废墟安装地热发电站（不扣除背包物品）。
+- 新增地热发电站电力线扩展：将地热站的连接距离和覆盖半径设为星球直径，默认开启。
 - Relay landing site selection now checks for any player buildings (entities/prebuilds) within 52m and rejects if found.
 - After clearing ground Dark Fog on current planet, automatically install geothermal power stations on all base ruins (without deducting inventory items).
+- Added geothermal power line extension: sets geothermal station connection distance and cover radius to planet diameter. Enabled by default.
 
 ## 0.0.25
 
