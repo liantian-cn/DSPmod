@@ -150,12 +150,12 @@ namespace HardFog
             clearCurrentStarButton = wnd.AddButton(rightX, y, 240, tab, ClearCurrentStarKey, 16, "button-clear-current-star-dark-fog", OnClearCurrentStarClicked);
             y += 36f;
             fillGalaxyHivesButton = wnd.AddButton(rightX, y, 240, tab, FillGalaxyHivesKey, 16, "button-fill-galaxy-dark-fog-hives", OnFillGalaxyHivesClicked);
-            y += 36f;
-            constructLowLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
-            y += 36f;
-            constructMidLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructMidLatitudeRuinsKey, 16, "button-surface-ruins-construct-mid-latitude", OnConstructMidLatitudeRuinsClicked);
-            y += 36f;
-            constructHighLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructHighLatitudeRuinsKey, 16, "button-surface-ruins-construct-high-latitude", OnConstructHighLatitudeRuinsClicked);
+            // y += 36f;
+            // constructLowLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructLowLatitudeRuinsKey, 16, "button-surface-ruins-construct-low-latitude", OnConstructLowLatitudeRuinsClicked);
+            // y += 36f;
+            // constructMidLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructMidLatitudeRuinsKey, 16, "button-surface-ruins-construct-mid-latitude", OnConstructMidLatitudeRuinsClicked);
+            // y += 36f;
+            // constructHighLatitudeRuinsButton = wnd.AddButton(rightX, y, 260, tab, ConstructHighLatitudeRuinsKey, 16, "button-surface-ruins-construct-high-latitude", OnConstructHighLatitudeRuinsClicked);
             // Ghost UI hook: keep the geothermal helper code, but do not expose the button.
             // y += 36f;
             // buildGeothermalOnIdleRuinsButton = wnd.AddButton(rightX, y, 340, tab, BuildGeothermalOnIdleRuinsKey, 16, "button-surface-ruins-build-geothermal-on-idle-ruins", OnBuildGeothermalOnIdleRuinsClicked);
