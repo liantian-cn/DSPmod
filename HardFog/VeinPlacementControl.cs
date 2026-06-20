@@ -38,11 +38,6 @@ namespace HardFog
         private static Harmony harmony;
         private static EventHandler settingChangedHandler;
 
-        // 记录需要铺设地基的位置，键为星球 ID，值为需要铺设地基的位置列表。
-        // 矿脉生成发生在后台线程，工厂创建在主线程，需要跨线程传递数据。
-        private static readonly Dictionary<int, List<Vector3>> PendingFoundationPositions = new Dictionary<int, List<Vector3>>();
-        private static readonly object PendingFoundationLock = new object();
-
         // PlanetAlgorithm.planet 是非公开字段，用 FieldRef 读取，避免每次反射 GetValue 的开销。
         private static readonly AccessTools.FieldRef<PlanetAlgorithm, PlanetData> PlanetRef =
             AccessTools.FieldRefAccess<PlanetAlgorithm, PlanetData>("planet");
@@ -493,7 +488,7 @@ namespace HardFog
         }
 
         // 检查候选方向对应地形是否允许放该矿种。
-        // 所有矿组都允许生成，包括海面区域（会自动铺设地基）。
+        // 所有矿组都允许生成，包括海面区域。
         private static bool IsValidTerrainCandidate(PlanetData planet, VeinGroupWork group, Vector3 candidate)
         {
             // 所有矿组都允许生成，不再检查地形高度。
@@ -602,7 +597,7 @@ namespace HardFog
             return degrees * Mathf.PI / 180f;
         }
 
-        // 用新的中心方向和局部偏移重写一个矿组中所有矿点的位置，并铺设透明地基。
+        // 用新的中心方向和局部偏移重写一个矿组中所有矿点的位置。
         private static void RegenerateGroupVeins(PlanetData planet, PlanetRawData data, VeinGroupWork group, Vector3 center, DotNet35Random rng)
         {
             List<Vector2> offsets = GenerateLocalOffsets(group, rng);
@@ -643,65 +638,6 @@ namespace HardFog
                 // VeinData 是值类型，修改后必须写回 veinPool。
                 veinPool[veinId] = vein;
             }
-
-            // 在矿组中心和每个矿点下面铺设透明地基。
-            PlaceTransparentFoundationForGroup(planet, group, center, veinPool);
-        }
-
-        // 为矿组中心和每个矿点记录需要铺设透明地基的位置。
-        // 矿脉生成发生在后台线程，工厂创建在主线程，需要记录位置后在工厂创建后铺设。
-        private static void PlaceTransparentFoundationForGroup(PlanetData planet, VeinGroupWork group, Vector3 center, VeinData[] veinPool)
-        {
-            // 记录需要铺设地基的位置。
-            List<Vector3> positions = new List<Vector3>();
-
-            // 记录矿组中心位置。
-            if (center.sqrMagnitude > 1E-08f)
-            {
-                positions.Add(center);
-            }
-
-            // 记录每个矿点位置。
-            for (int i = 0; i < group.VeinIds.Count; i++)
-            {
-                int veinId = group.VeinIds[i];
-                VeinData vein = veinPool[veinId];
-                if (vein.pos.sqrMagnitude > 1E-08f)
-                {
-                    positions.Add(vein.pos);
-                }
-            }
-
-            // 将位置添加到待处理字典中（线程安全）。
-            if (positions.Count > 0)
-            {
-                lock (PendingFoundationLock)
-                {
-                    List<Vector3> existingPositions;
-                    if (!PendingFoundationPositions.TryGetValue(planet.id, out existingPositions))
-                    {
-                        existingPositions = new List<Vector3>();
-                        PendingFoundationPositions[planet.id] = existingPositions;
-                    }
-                    existingPositions.AddRange(positions);
-                }
-            }
-        }
-
-        // 在指定位置铺设透明地基。
-        private static void PlaceTransparentFoundationAtPosition(PlatformSystem platformSystem, Vector3 position, int type, int color, byte state)
-        {
-            // 将世界坐标转换为地基索引。
-            int reformIndex = platformSystem.GetReformIndexForPosition(position);
-            if (reformIndex < 0)
-            {
-                return;
-            }
-
-            // 设置地基类型、颜色和状态。
-            platformSystem.SetReformType(reformIndex, type);
-            platformSystem.SetReformColor(reformIndex, color);
-            platformSystem.SetReformState(reformIndex, state);
         }
 
         // 生成同一矿组内部的二维偏移列表；既要成团，也要避免矿点互相重叠。
@@ -867,71 +803,6 @@ namespace HardFog
         private static void PlanetAlgorithm13GenerateVeinsPostfix(PlanetAlgorithm __instance)
         {
             ApplyPlacement(__instance);
-        }
-
-        // PlanetFactory.Init 的后处理；在工厂创建后铺设待处理的透明地基。
-        [HarmonyPostfix]
-        [HarmonyPatch(typeof(PlanetFactory), "Init")]
-        private static void PlanetFactoryInitPostfix(PlanetFactory __instance)
-        {
-            if (__instance == null || __instance.planet == null)
-            {
-                return;
-            }
-
-            int planetId = __instance.planet.id;
-            List<Vector3> positions = null;
-
-            // 从待处理字典中获取该星球的地基位置（线程安全）。
-            lock (PendingFoundationLock)
-            {
-                if (PendingFoundationPositions.TryGetValue(planetId, out positions))
-                {
-                    PendingFoundationPositions.Remove(planetId);
-                }
-            }
-
-            // 如果没有待处理的位置，直接返回。
-            if (positions == null || positions.Count == 0)
-            {
-                return;
-            }
-
-            // 铺设透明地基。
-            PlaceTransparentFoundationAtPositions(__instance, positions);
-        }
-
-        // 在指定位置列表铺设透明地基。
-        private static void PlaceTransparentFoundationAtPositions(PlanetFactory factory, List<Vector3> positions)
-        {
-            if (factory.platformSystem == null)
-            {
-                return;
-            }
-
-            PlatformSystem platformSystem = factory.platformSystem;
-
-            // 确保地基数据已初始化。
-            platformSystem.EnsureReformData();
-
-            // 透明地基类型为 7（kUndecalReformType）。
-            const int transparentFoundationType = 7;
-            // 默认地基颜色为 0。
-            const int defaultFoundationColor = 0;
-            // 地基状态为 1 表示已铺设。
-            const byte foundationState = 1;
-
-            // 为每个位置铺设透明地基。
-            for (int i = 0; i < positions.Count; i++)
-            {
-                Vector3 position = positions[i];
-                if (position.sqrMagnitude > 1E-08f)
-                {
-                    PlaceTransparentFoundationAtPosition(platformSystem, position, transparentFoundationType, defaultFoundationColor, foundationState);
-                }
-            }
-
-            Log?.LogInfo($"Placed {positions.Count} transparent foundations on planet {factory.planet.displayName ?? factory.planet.name}");
         }
     }
 }
