@@ -488,16 +488,12 @@ namespace HardFog
         }
 
         // 检查候选方向对应地形是否允许放该矿种。
+        // 所有矿组都允许生成，包括海面区域（会自动铺设地基）。
         private static bool IsValidTerrainCandidate(PlanetData planet, VeinGroupWork group, Vector3 candidate)
         {
-            // 油井和 Bamboo 类型允许水面/特殊地形，不用高度过滤。
-            if (IsWaterAllowedVeinGroup(group))
-            {
-                return true;
-            }
-
-            // 普通矿要求查询高度至少达到星球半径，避免生成到海面下。
-            return planet.data.QueryHeight(candidate) >= planet.radius;
+            // 所有矿组都允许生成，不再检查地形高度。
+            // 海面区域的矿脉会在 RegenerateGroupVeins 中抬高到海面以上。
+            return true;
         }
 
         // 判断矿组是否允许在水面或特殊地形上生成。
@@ -630,6 +626,14 @@ namespace HardFog
                 // 用查询高度投回真实地表，并清掉该点附近植物，避免矿点和植被重叠。
                 float height = data.QueryHeight(pos);
                 data.EraseVegetableAtPoint(pos);
+
+                // 如果查询高度低于星球半径（即在海面以下），将矿脉抬高到海面以上。
+                // 海平面高度为 planet.realRadius，矿脉需要生成到海面以上 0.2 米处。
+                if (height < planet.realRadius)
+                {
+                    height = planet.realRadius + 0.2f;
+                }
+
                 vein.pos = pos.normalized * height;
                 // VeinData 是值类型，修改后必须写回 veinPool。
                 veinPool[veinId] = vein;
