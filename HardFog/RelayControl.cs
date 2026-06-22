@@ -17,11 +17,11 @@ namespace HardFog
         private const string PatchGuid = "me.liantian.plugin.HardFog.RelayControl";
         // 原版约每 600 个巢穴 tick 检查一次中继需求；更快发射时替换为更短间隔。
         private const int VanillaRelayDemandInterval = 600;
-        private const int FasterRelayDemandInterval = 120;
+        private const int FasterRelayDemandInterval = 45;
         // 降落时摧毁附近建筑的半径，和原版信标降落逻辑一致。
         private const float EraseObstacleRadius = 20.1f;
         // 候选落点与已有基地/废墟的最小间距（米）。
-        private const float MinClearanceMeters = 52f;
+        private const float MinClearanceMeters = 20.1f;
 
         // LandingLogicEnabled 是总开关；MarkersOnly 只在总开关开启时有实际效果。
         internal static ConfigEntry<bool> LandingLogicEnabledConfig { get; private set; }
@@ -620,10 +620,10 @@ namespace HardFog
                 return;
             }
 
-            if (HasOutgoingRelay(hive))
-            {
-                return;
-            }
+            // if (HasOutgoingRelay(hive))
+            // {
+            //     return;
+            // }
 
             for (int i = 0; i < hive.idleRelayCount; i++)
             {

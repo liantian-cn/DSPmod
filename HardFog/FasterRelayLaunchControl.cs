@@ -24,7 +24,7 @@ namespace HardFog
     {
         private const string PatchGuid = "me.liantian.plugin.HardFog.FasterRelayLaunch";
         private const int VanillaRelayDemandInterval = 600;
-        private const int FasterRelayDemandInterval = 120;
+        private const int FasterRelayDemandInterval = 35;
 
         internal static ConfigEntry<bool> EnabledConfig { get; private set; }
 
@@ -243,10 +243,10 @@ namespace HardFog
                 return;
             }
 
-            if (HasOutgoingRelay(hive))
-            {
-                return;
-            }
+            // if (HasOutgoingRelay(hive))
+            // {
+            //     return;
+            // }
 
             for (int i = 0; i < hive.idleRelayCount; i++)
             {
